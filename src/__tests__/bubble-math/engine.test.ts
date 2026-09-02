@@ -104,4 +104,125 @@ describe('Bubble Math Engine Definition', () => {
     expect(challengeState.questions).toEqual(mockState.questions);
     expect(bubbleMathDefinition.variants).toContain('full-challenge');
   });
+
+  it('creates exactly 10 deterministic fixed questions for practice-1 variant', () => {
+    const p1Config: PracticeConfig = {
+      ...dummyConfig,
+      variantId: 'practice-1',
+      itemCount: 10,
+    };
+    const state1 = bubbleMathDefinition.createInitialState(p1Config, 'seed-1');
+    const state2 = bubbleMathDefinition.createInitialState(p1Config, 'seed-2');
+
+    expect(state1.questions.length).toBe(10);
+    expect(state2.questions.length).toBe(10);
+    expect(state1.questions).toEqual(state2.questions);
+    
+    // Verify each question has 3 expressions and correct ascending order
+    state1.questions.forEach((q, idx) => {
+      expect(q.expressions.length).toBe(3);
+      expect(q.correctOrderIds.length).toBe(3);
+      
+      const val0 = q.expressions.find(e => e.id === q.correctOrderIds[0])!.value;
+      const val1 = q.expressions.find(e => e.id === q.correctOrderIds[1])!.value;
+      const val2 = q.expressions.find(e => e.id === q.correctOrderIds[2])!.value;
+      expect(val0).toBeLessThan(val1);
+      expect(val1).toBeLessThan(val2);
+    });
+  });
+
+  it('creates exactly 15 deterministic fixed questions for practice-2 variant', () => {
+    const p2Config: PracticeConfig = {
+      ...dummyConfig,
+      variantId: 'practice-2',
+      itemCount: 15,
+    };
+    const state1 = bubbleMathDefinition.createInitialState(p2Config, 'seed-1');
+    const state2 = bubbleMathDefinition.createInitialState(p2Config, 'seed-2');
+
+    expect(state1.questions.length).toBe(15);
+    expect(state2.questions.length).toBe(15);
+    expect(state1.questions).toEqual(state2.questions);
+    
+    // Verify each question has 3 expressions and correct ascending order (<= for duplicates like Q3)
+    state1.questions.forEach((q, idx) => {
+      expect(q.expressions.length).toBe(3);
+      expect(q.correctOrderIds.length).toBe(3);
+      
+      const val0 = q.expressions.find(e => e.id === q.correctOrderIds[0])!.value;
+      const val1 = q.expressions.find(e => e.id === q.correctOrderIds[1])!.value;
+      const val2 = q.expressions.find(e => e.id === q.correctOrderIds[2])!.value;
+      expect(val0).toBeLessThanOrEqual(val1);
+      expect(val1).toBeLessThanOrEqual(val2);
+    });
+
+    // Check specific Q3 duplicate value of 9
+    const q3 = state1.questions[2];
+    expect(q3.expressions.map(e => e.display)).toEqual(["7", "3 + 6", "12 - 3"]);
+    expect(q3.expressions.map(e => e.value)).toEqual([7, 9, 9]);
+
+    // Check decimal questions (Q11-Q15)
+    expect(state1.questions[10].expressions.map(e => e.display)).toEqual(["5", "2.5", "2 + 2"]);
+    expect(state1.questions[14].expressions.map(e => e.display)).toEqual(["7", "3.2 + 2.5", "8.4 - 1.1"]);
+  });
+
+  it('creates exactly 20 deterministic fixed questions for practice-3 variant with verified orders', () => {
+    const p3Config: PracticeConfig = {
+      ...dummyConfig,
+      variantId: 'practice-3',
+      itemCount: 20,
+    };
+    const state1 = bubbleMathDefinition.createInitialState(p3Config, 'seed-1');
+    const state2 = bubbleMathDefinition.createInitialState(p3Config, 'seed-2');
+
+    expect(state1.questions.length).toBe(20);
+    expect(state2.questions.length).toBe(20);
+    expect(state1.questions).toEqual(state2.questions);
+    
+    // Expected order patterns from prompt:
+    const expectedOrders = [
+      [1, 0, 2], // Q1: 2 -> 1 -> 3
+      [2, 1, 0], // Q2: 3 -> 2 -> 1
+      [0, 1, 2], // Q3: 1 -> 2 -> 3
+      [2, 1, 0], // Q4: 3 -> 2 -> 1
+      [2, 1, 0], // Q5: 3 -> 2 -> 1
+      [1, 2, 0], // Q6: 2 -> 3 -> 1
+      [2, 0, 1], // Q7: 3 -> 1 -> 2
+      [1, 0, 2], // Q8: 2 -> 1 -> 3
+      [1, 0, 2], // Q9: 2 -> 1 -> 3
+      [2, 1, 0], // Q10: 3 -> 2 -> 1
+      [0, 2, 1], // Q11: 1 -> 3 -> 2
+      [2, 0, 1], // Q12: 3 -> 1 -> 2
+      [0, 1, 2], // Q13: 1 -> 2 -> 3
+      [2, 1, 0], // Q14: 3 -> 2 -> 1
+      [1, 0, 2], // Q15: 2 -> 1 -> 3
+      [2, 0, 1], // Q16: 3 -> 1 -> 2
+      [1, 0, 2], // Q17: 2 -> 1 -> 3
+      [1, 0, 2], // Q18: 2 -> 1 -> 3
+      [2, 1, 0], // Q19: 3 -> 2 -> 1
+      [2, 1, 0], // Q20: 3 -> 2 -> 1
+    ];
+
+    state1.questions.forEach((q, idx) => {
+      expect(q.expressions.length).toBe(3);
+      expect(q.correctOrderIds.length).toBe(3);
+
+      const expectedIdxs = expectedOrders[idx];
+      const expectedIds = expectedIdxs.map(i => q.expressions[i].id);
+      expect(q.correctOrderIds).toEqual(expectedIds);
+
+      const val0 = q.expressions.find(e => e.id === q.correctOrderIds[0])!.value;
+      const val1 = q.expressions.find(e => e.id === q.correctOrderIds[1])!.value;
+      const val2 = q.expressions.find(e => e.id === q.correctOrderIds[2])!.value;
+      expect(val0).toBeLessThan(val1);
+      expect(val1).toBeLessThan(val2);
+    });
+
+    // Verify Q16-Q20 special formats (powers, brackets)
+    expect(state1.questions[15].expressions[0].display).toBe("3²");
+    expect(state1.questions[16].expressions[1].display).toBe("2³");
+    expect(state1.questions[17].expressions[0].display).toBe("18 + (3 + 2)");
+    expect(state1.questions[18].expressions[1].display).toBe("3³");
+    expect(state1.questions[19].expressions[2].display).toBe("24 + (10 + 13)");
+  });
 });

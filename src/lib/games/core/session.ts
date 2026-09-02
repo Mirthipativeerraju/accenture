@@ -41,6 +41,10 @@ export class SessionController<TState = unknown, TActionPayload = unknown> {
     return { ...this.session };
   }
 
+  getConfig(): PracticeConfig {
+    return this.config;
+  }
+
   transitionTo(newStatus: SessionStatus): boolean {
     const current = this.session.status;
     
@@ -73,6 +77,14 @@ export class SessionController<TState = unknown, TActionPayload = unknown> {
   recordAction(actionPayload: TActionPayload, timeMs: number): GameAction<TActionPayload> {
     if (this.session.status !== "PLAYING") {
       throw new Error("Cannot record action: Session is not in PLAYING state.");
+    }
+
+    // Guard against duplicate actions recorded for the same question itemIndex
+    const existingAction = this.session.actions.find(
+      (a) => a.itemIndex === this.session.currentItemIndex
+    );
+    if (existingAction) {
+      return existingAction as GameAction<TActionPayload>;
     }
 
     const action: GameAction<TActionPayload> = {

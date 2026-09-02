@@ -6,6 +6,9 @@ export interface PersistenceProvider {
   deleteSession(sessionId: string): void;
   saveResult(result: GameResult): void;
   loadResults(): GameResult[];
+  saveLatestResult(variantId: string, result: GameResult): void;
+  getLatestResult(variantId: string): GameResult | null;
+  clearLatestResult(variantId: string): void;
 }
 
 const STORAGE_PREFIX = "aptitude-simulator:v1:";
@@ -60,6 +63,46 @@ export class LocalPersistence implements PersistenceProvider {
     } catch (e) {
       console.warn("Failed to load results from local storage", e);
       return [];
+    }
+  }
+
+  private isSessionAvailable(): boolean {
+    return typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined';
+  }
+
+  saveLatestResult(variantId: string, result: GameResult): void {
+    if (!this.isSessionAvailable()) return;
+    try {
+      sessionStorage.setItem(`${STORAGE_PREFIX}latest_result:${variantId}`, JSON.stringify(result));
+    } catch (e) {
+      console.warn("Failed to save latest result to session storage", e);
+    }
+  }
+
+  getLatestResult(variantId: string): GameResult | null {
+    if (!this.isSessionAvailable()) return null;
+    try {
+      const data = sessionStorage.getItem(`${STORAGE_PREFIX}latest_result:${variantId}`);
+      return data ? JSON.parse(data) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  clearLatestResult(variantId: string): void {
+    if (this.isSessionAvailable()) {
+      try {
+        sessionStorage.removeItem(`${STORAGE_PREFIX}latest_result:${variantId}`);
+      } catch (e) {
+        // ignore
+      }
+    }
+    if (this.isAvailable()) {
+      try {
+        localStorage.removeItem(`${STORAGE_PREFIX}latest_result:${variantId}`);
+      } catch (e) {
+        // ignore
+      }
     }
   }
 }

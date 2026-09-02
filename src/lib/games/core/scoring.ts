@@ -3,22 +3,34 @@ import { GameSession, RawMetrics, ScoringConfig, GameResult } from "./types";
 export function extractRawMetrics(session: GameSession): RawMetrics {
   let correct = 0;
   let incorrect = 0;
-  const skipped = 0;
-  const timedOut = 0;
+  let skipped = 0;
+  let timedOut = 0;
   
   let totalResponseTimeMs = 0;
 
-  session.actions.forEach(action => {
+  // Track unique completed question indices to avoid duplicate counting
+  const processedIndices = new Set<number>();
+
+  session.actions.forEach((action, idx) => {
+    const itemIdx = typeof action.itemIndex === "number" ? action.itemIndex : idx;
+    if (processedIndices.has(itemIdx)) {
+      return;
+    }
+    processedIndices.add(itemIdx);
+
     if (action.valid) {
       correct++;
     } else {
-      // Different games might have different meanings for invalid, but baseline is incorrect
       incorrect++; 
     }
-    totalResponseTimeMs += action.responseTimeMs;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ((action.payload as any)?.isTimeout) {
+      timedOut++;
+    }
+    totalResponseTimeMs += action.responseTimeMs || 0;
   });
 
-  const totalActions = session.actions.length;
+  const totalActions = processedIndices.size;
   const averageResponseTimeMs = totalActions > 0 ? totalResponseTimeMs / totalActions : 0;
   
   const elapsedTimeMs = session.completedAt && session.startedAt 
@@ -60,13 +72,18 @@ export function generateGameResult(session: GameSession, config: ScoringConfig):
   const totalAttempted = rawMetrics.correct + rawMetrics.incorrect;
   const accuracy = totalAttempted > 0 ? rawMetrics.correct / totalAttempted : 0;
   
+  const isPractice = session.variantId?.startsWith("practice-");
+  const score = isPractice
+    ? rawMetrics.totalActions * 10
+    : calculatePracticeScore(rawMetrics, config);
+
   return {
     sessionId: session.sessionId,
     gameId: session.gameId,
     variantId: session.variantId,
     difficulty: session.difficulty,
     mode: session.mode,
-    score: calculatePracticeScore(rawMetrics, config),
+    score,
     accuracy: accuracy,
     rawMetrics,
     completedAt: session.completedAt || Date.now(),

@@ -7,14 +7,9 @@ import { Button } from "@/components/ui/button";
 import { useGameSessionStore } from "@/lib/store/game-session";
 import { PracticeConfig } from "@/lib/games/core/types";
 import { registerBubbleMath } from "@/lib/games/bubble-math";
+import { persistence } from "@/lib/games/core/persistence";
 
-const VARIANTS: Record<string, Partial<PracticeConfig> & { label?: string }> = {
-  "speed-techniques": {
-    variantId: "speed-techniques",
-    difficulty: "EASY",
-    timeLimitSeconds: 20,
-    itemCount: 10
-  },
+export const BUBBLE_MATH_VARIANTS: Record<string, Partial<PracticeConfig> & { label?: string }> = {
   "practice-1": {
     variantId: "practice-1",
     difficulty: "EASY",
@@ -56,6 +51,8 @@ const VARIANTS: Record<string, Partial<PracticeConfig> & { label?: string }> = {
   }
 };
 
+const VARIANTS = BUBBLE_MATH_VARIANTS;
+
 export default function BubbleMathPracticeSetup() {
   const router = useRouter();
   const { initializeSession } = useGameSessionStore();
@@ -68,6 +65,11 @@ export default function BubbleMathPracticeSetup() {
   const handleLaunch = () => {
     const variantConfig = VARIANTS[selectedVariant];
     
+    if (typeof window !== "undefined" && variantConfig.variantId) {
+      sessionStorage.setItem("bubble_math_variant", variantConfig.variantId);
+      persistence.clearLatestResult(variantConfig.variantId);
+    }
+
     const config: PracticeConfig = {
       gameId: "bubble-math",
       variantId: variantConfig.variantId!,
@@ -91,7 +93,12 @@ export default function BubbleMathPracticeSetup() {
       // No-op: Game component handles per-question timeout
     });
 
-    router.push("/assessment/bubble-math");
+    const routeVariant = selectedVariant === "practice-1" ? "practice1"
+      : selectedVariant === "practice-2" ? "practice2"
+      : selectedVariant === "practice-3" ? "practice3"
+      : selectedVariant;
+
+    router.push(`/assessment/bubble-math/${routeVariant}`);
   };
 
   return (

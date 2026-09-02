@@ -30,7 +30,12 @@ export function BubbleMathGame() {
   } = useGameSessionStore();
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [result, setResult] = useState<GameResult | null>(null);
+  const [result, setResult] = useState<GameResult | null>(() => {
+    if (typeof window !== "undefined" && currentSession?.variantId?.startsWith("practice-")) {
+      return persistence.getLatestResult(currentSession.variantId);
+    }
+    return null;
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedbackState, setFeedbackState] = useState<
     "correct" | "incorrect" | null
@@ -38,6 +43,16 @@ export function BubbleMathGame() {
 
   const submitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const questionStartTime = useRef<number>(0);
+
+  // Restore saved result on variant change if idle
+  useEffect(() => {
+    if (currentSession?.variantId?.startsWith("practice-") && currentSession.status === "IDLE") {
+      const savedResult = persistence.getLatestResult(currentSession.variantId);
+      if (savedResult) {
+        setResult(savedResult);
+      }
+    }
+  }, [currentSession?.variantId, currentSession?.status]);
 
   // ───────────────────────────────────────────────────────────────────────────
   // Cleanup
@@ -78,22 +93,26 @@ export function BubbleMathGame() {
           responseTimeMs
         );
 
+        const isLastQuestion = (currentSession?.currentItemIndex ?? 0) >= (currentSession?.totalItems || 10) - 1;
+
         submitTimeoutRef.current = setTimeout(() => {
           setSelectedIds([]);
           setIsSubmitting(false);
 
-          advanceQuestion();
-
-          questionStartTime.current = Date.now();
-
-          timer?.reset();
-          timer?.start();
+          if (!isLastQuestion) {
+            advanceQuestion();
+            questionStartTime.current = Date.now();
+            timer?.reset();
+            timer?.start();
+          }
         }, 800);
       }
     }
   }, [
     remainingSeconds,
     currentSession?.status,
+    currentSession?.currentItemIndex,
+    currentSession?.totalItems,
     selectedIds,
     recordAction,
     advanceQuestion,
@@ -114,14 +133,21 @@ export function BubbleMathGame() {
     ) {
       if (!result && controller) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const config = (controller as any).config;
+        const ctrlConfig = (controller as any)?.getConfig?.() || (controller as any)?.config;
+        const scoringConfig = ctrlConfig?.scoringConfig || {
+          mode: "TIMED_PRACTICE",
+          weights: { accuracy: 1, speed: 1, completion: 1 },
+        };
 
         const generatedResult = generateGameResult(
           currentSession,
-          config.scoringConfig
+          scoringConfig
         );
 
         persistence.saveResult(generatedResult);
+        if (currentSession.variantId?.startsWith("practice-")) {
+          persistence.saveLatestResult(currentSession.variantId, generatedResult);
+        }
         setResult(generatedResult);
       }
     }
@@ -135,25 +161,36 @@ export function BubbleMathGame() {
     return <div>Initializing...</div>;
   }
 
+  const isPracticeVariant = currentSession.variantId?.startsWith("practice-");
+  const isFullChallenge = currentSession.variantId === "full-challenge";
+  const isFullMockTest = currentSession.variantId === "full-mock-test";
+  const isFullBubbleMockTest = currentSession.variantId === "full-bubble-mock-test";
+
   const state = currentSession.gameState as BubbleMathState;
 
   const currentQ: BubbleMathQuestion | undefined =
     state.questions[currentSession.currentItemIndex];
 
   // ───────────────────────────────────────────────────────────────────────────
-  // Completed state
+  // Completed state (or restored practice result)
   // ───────────────────────────────────────────────────────────────────────────
 
   if (
     ["COMPLETED", "TIMEOUT", "FAILED", "ABORTED"].includes(
       currentSession.status
-    )
+    ) || (isPracticeVariant && result)
   ) {
     if (result) {
       return (
         <BubbleMathResult
           result={result}
-          onRestart={() => window.location.reload()}
+          onRestart={() => {
+            if (currentSession.variantId?.startsWith("practice-")) {
+              persistence.clearLatestResult(currentSession.variantId);
+            }
+            setResult(null);
+            window.location.reload();
+          }}
         />
       );
     }
@@ -162,15 +199,15 @@ export function BubbleMathGame() {
   }
 
   // ───────────────────────────────────────────────────────────────────────────
-  const isPracticeVariant = currentSession.variantId?.startsWith("practice-");
-  const isFullChallenge = currentSession.variantId === "full-challenge";
-  const isFullMockTest = currentSession.variantId === "full-mock-test";
-  const isFullBubbleMockTest = currentSession.variantId === "full-bubble-mock-test";
 
-  if (currentSession.status === "IDLE" && !isFullMockTest && !isFullBubbleMockTest) {
+  if (currentSession.status === "IDLE" && !isFullMockTest && !isFullBubbleMockTest && !isFullChallenge) {
     return (
       <BubbleMathInstructions
         onStart={() => {
+          if (currentSession.variantId?.startsWith("practice-")) {
+            persistence.clearLatestResult(currentSession.variantId);
+          }
+          setResult(null);
           startSession();
           questionStartTime.current = Date.now();
         }}
@@ -225,17 +262,19 @@ export function BubbleMathGame() {
         );
       }
 
+      const isLastQuestion = (currentSession?.currentItemIndex ?? 0) >= (currentSession?.totalItems || 10) - 1;
+
       submitTimeoutRef.current = setTimeout(() => {
         setSelectedIds([]);
         setIsSubmitting(false);
         setFeedbackState(null);
 
-        advanceQuestion();
-
-        questionStartTime.current = Date.now();
-
-        timer?.reset();
-        timer?.start();
+        if (!isLastQuestion) {
+          advanceQuestion();
+          questionStartTime.current = Date.now();
+          timer?.reset();
+          timer?.start();
+        }
       }, isChallengeOrMock ? 450 : 1000);
     }
   };

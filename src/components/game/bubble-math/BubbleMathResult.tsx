@@ -4,6 +4,7 @@ import React from "react";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { GameResult } from "@/lib/games/core/types";
+import { persistence } from "@/lib/games/core/persistence";
 import { useRouter } from "next/navigation";
 
 interface BubbleMathResultProps {
@@ -22,7 +23,7 @@ export function BubbleMathResult({ result, onRestart }: BubbleMathResultProps) {
           <CardTitle className="text-3xl font-bold">Practice Complete</CardTitle>
           <div className="mt-6 flex flex-col items-center justify-center">
             <span className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Practice Score</span>
-            <span className="text-6xl font-black text-primary">{result.score}</span>
+            <span className="text-6xl font-black text-primary">{correct * 10}</span>
           </div>
         </CardHeader>
         
@@ -58,8 +59,17 @@ export function BubbleMathResult({ result, onRestart }: BubbleMathResultProps) {
         </div>
         
         <CardFooter className="flex justify-center gap-4 bg-muted/20 p-8">
-          <Button variant="outline" size="lg" onClick={() => router.push("/practice/bubble-math")}>
-            Change Variant
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={() => {
+              if (result.variantId) {
+                persistence.clearLatestResult(result.variantId);
+              }
+              router.push("/practice/bubble-math");
+            }}
+          >
+            {result.variantId?.startsWith("practice-") ? "Choose Another Practice" : "Change Variant"}
           </Button>
           {onRestart && (
             <Button size="lg" onClick={onRestart}>
