@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useGameSessionStore } from "@/lib/store/game-session";
 import {
   BubbleMathState,
@@ -13,6 +14,7 @@ import { BubbleMathInstructions } from "./BubbleMathInstructions";
 import { BubbleMathResult } from "./BubbleMathResult";
 import { GameResult } from "@/lib/games/core/types";
 import { AssessmentTimer } from "@/components/game/AssessmentTimer";
+import { Button } from "@/components/ui/button";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Top-level component
@@ -429,14 +431,14 @@ function PracticeUI({
 
   const patternA = [
     "top-[4%] left-[60%] -translate-x-1/2",
-    "top-[30%] left-[25%]",
+    "top-[30%] left-[8%] sm:left-[25%]",
     "top-[58%] right-[28%]",
   ];
 
 const patternB = [
-  "top-[4%] left-[30%]",
-  "top-[32%] left-[60%] -translate-x-1/2",
-  "top-[60%] left-[30%]",
+  "top-[4%] left-[18%] sm:left-[30%]",
+  "top-[32%] left-[75%] sm:left-[60%] -translate-x-1/2",
+  "top-[60%] left-[18%] sm:left-[30%]",
 ];
 
   const positions =
@@ -847,9 +849,10 @@ function FullBubbleMockTestUI({
   onStartSession,
   timer,
 }: BubbleUIProps) {
+  const router = useRouter();
   const timeLimitSeconds = controller?.config?.timeLimitSeconds || 15;
 
-  const [phase, setPhase] = useState<"intro" | "practice" | "practice-completed" | "playing">("intro");
+  const [phase, setPhase] = useState<"start" | "intro" | "practice" | "practice-completed" | "playing">("start");
   const [tutorialStep, setTutorialStep] = useState(1);
   const [demoSelected, setDemoSelected] = useState(false);
 
@@ -864,7 +867,7 @@ function FullBubbleMockTestUI({
   const practiceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if ((phase === "intro" || phase === "practice-completed") && timer) {
+    if ((phase === "start" || phase === "intro" || phase === "practice-completed") && timer) {
       timer.stop();
     }
   }, [phase, timer]);
@@ -1004,7 +1007,7 @@ function FullBubbleMockTestUI({
   else if (activeQ.layoutPattern === "C") positions = patternC;
   else if (activeQ.layoutPattern === "D") positions = patternD;
 
-  if (phase === "intro") {
+  if (phase === "intro" || phase === "start") {
     positions = [
       "top-[19%] sm:top-[21%] left-[50%] -translate-x-1/2",
       "top-[55%] sm:top-[55%] left-[25%] -translate-x-1/2",
@@ -1035,8 +1038,43 @@ function FullBubbleMockTestUI({
         </div>
       </header>
 
-      {/* Main Challenge Stage Area - Constrained and Centered */}
-      <main className="flex-1 w-full max-w-[800px] mx-auto px-4 py-6 flex flex-col justify-start items-center">
+      {/* Mobile Screen Restriction View (< md) */}
+      <div className="flex md:hidden flex-1 w-full min-h-[calc(100vh-3.5rem)] flex-col items-center justify-center p-6 text-center">
+        <div className="w-full max-w-sm bg-white rounded-2xl p-8 border border-slate-200/80 shadow-md flex flex-col items-center gap-5">
+          <div className="w-16 h-16 rounded-2xl bg-neutral-100 flex items-center justify-center text-neutral-800 shadow-inner">
+            <svg
+              className="w-8 h-8"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <rect width="18" height="12" x="3" y="4" rx="2" />
+              <line x1="2" x2="22" y1="20" y2="20" />
+            </svg>
+          </div>
+          <div className="flex flex-col gap-2">
+            <h2 className="text-xl font-bold text-neutral-900 tracking-tight">
+              Better experience on a larger screen
+            </h2>
+            <p className="text-sm text-slate-500 leading-relaxed">
+              Please use a laptop or desktop for the Full Bubble Mock Test.
+            </p>
+          </div>
+          <Button
+            size="lg"
+            className="w-full bg-black hover:bg-neutral-800 text-white font-semibold py-3 px-6 rounded-lg transition-transform active:scale-95 text-sm tracking-wide shadow-sm"
+            onClick={() => router.push("/practice/bubble-math")}
+          >
+            Move to Practice Tests
+          </Button>
+        </div>
+      </div>
+
+      {/* Main Challenge Stage Area - Constrained and Centered (Desktop md+) */}
+      <main className="hidden md:flex flex-1 w-full max-w-[800px] mx-auto px-4 py-6 flex-col justify-start items-center">
 
         {/* 2. Dark Horizontal Challenge Bar */}
         <div className="w-full bg-neutral-900 text-white px-5 py-3 rounded-t-lg flex items-center justify-between shadow-md select-none border-b border-neutral-800">
@@ -1064,8 +1102,23 @@ function FullBubbleMockTestUI({
         {/* 3. Constrained Light Play Area */}
         <div className="w-full bg-slate-100 border-x border-b border-slate-200 rounded-b-lg shadow-sm flex flex-col min-h-[480px] p-5 justify-between relative overflow-hidden">
 
-          {/* Practice Completed Screen */}
-          {phase === "practice-completed" ? (
+          {/* Start Screen */}
+          {phase === "start" ? (
+            <div className="flex-1 flex flex-col items-center justify-center min-h-[460px] sm:min-h-[500px] text-center px-4">
+              <div className="bg-white p-8 sm:p-10 rounded-xl shadow-lg border border-slate-200 max-w-md w-full flex flex-col items-center gap-6">
+                <p className="text-base sm:text-lg font-medium text-neutral-800">
+                  To start the full mock test, click on Continue
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setPhase("intro")}
+                  className="w-full bg-black hover:bg-neutral-800 text-white font-semibold py-3 px-6 rounded-lg transition-transform active:scale-95 text-sm tracking-wide shadow-sm"
+                >
+                  Continue
+                </button>
+              </div>
+            </div>
+          ) : phase === "practice-completed" ? (
             <div className="flex-1 flex flex-col items-center justify-center min-h-[460px] sm:min-h-[500px] text-center px-4">
               <div className="bg-white p-8 sm:p-10 rounded-xl shadow-lg border border-slate-200 max-w-md w-full flex flex-col items-center gap-6">
                 <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">

@@ -56,14 +56,16 @@ const VARIANTS = BUBBLE_MATH_VARIANTS;
 export default function BubbleMathPracticeSetup() {
   const router = useRouter();
   const { initializeSession } = useGameSessionStore();
-  const [selectedVariant, setSelectedVariant] = useState<string>("full-challenge");
+  const [selectedVariant, setSelectedVariant] = useState<string | null>(null);
 
   useEffect(() => {
     registerBubbleMath();
   }, []);
 
   const handleLaunch = () => {
+    if (!selectedVariant) return;
     const variantConfig = VARIANTS[selectedVariant];
+    if (!variantConfig) return;
     
     if (typeof window !== "undefined" && variantConfig.variantId) {
       sessionStorage.setItem("bubble_math_variant", variantConfig.variantId);
@@ -111,7 +113,7 @@ export default function BubbleMathPracticeSetup() {
           <p className="text-muted-foreground">Select a practice configuration below. These are simulator configurations for practicing your numerical dexterity.</p>
           
           <div className="grid gap-3">
-            {Object.entries(VARIANTS).map(([key, variant]) => (
+            {Object.entries(VARIANTS).filter(([key]) => key !== "full-mock-test").map(([key, variant]) => (
               <Button 
                 key={key}
                 variant={selectedVariant === key ? "default" : "outline"}
@@ -127,7 +129,7 @@ export default function BubbleMathPracticeSetup() {
           </div>
         </CardContent>
         <CardFooter>
-          <Button size="lg" className="w-full h-14 text-lg" onClick={handleLaunch}>Launch Practice</Button>
+          <Button size="lg" className="w-full h-14 text-lg" onClick={handleLaunch} disabled={!selectedVariant}>Launch Practice</Button>
         </CardFooter>
       </Card>
     </div>

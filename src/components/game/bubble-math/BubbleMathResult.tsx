@@ -58,7 +58,7 @@ export function BubbleMathResult({ result, onRestart }: BubbleMathResultProps) {
           )}
         </div>
         
-        <CardFooter className="flex justify-center gap-4 bg-muted/20 p-8">
+        <CardFooter className="flex flex-col justify-center gap-4 bg-muted/20 p-8 sm:flex-row">
           <Button
             variant="outline"
             size="lg"
