@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useGameSessionStore } from "@/lib/store/game-session";
 import {
   BubbleMathState,
@@ -167,7 +167,7 @@ export function BubbleMathGame() {
   const isFullMockTest = currentSession.variantId === "full-mock-test";
   const isFullBubbleMockTest = currentSession.variantId === "full-bubble-mock-test";
 
-  if (currentSession.status === "IDLE" && !isFullMockTest) {
+  if (currentSession.status === "IDLE" && !isFullMockTest && !isFullBubbleMockTest) {
     return (
       <BubbleMathInstructions
         onStart={() => {
@@ -771,6 +771,29 @@ function FullChallengeUI({
 // Full Bubble Mock Test UI
 // ─────────────────────────────────────────────────────────────────────────────
 
+const FIXED_PRACTICE_QUESTIONS: BubbleMathQuestion[] = [
+  {
+    expressions: [
+      { id: "pq1-1", display: "15 - 6", value: 9 },
+      { id: "pq1-2", display: "4 + 3", value: 7 },
+      { id: "pq1-3", display: "8", value: 8 },
+    ],
+    correctOrderIds: ["pq1-2", "pq1-3", "pq1-1"],
+    displayOrderIds: ["pq1-1", "pq1-2", "pq1-3"],
+    layoutPattern: "A",
+  },
+  {
+    expressions: [
+      { id: "pq2-1", display: "11 - 4", value: 7 },
+      { id: "pq2-2", display: "2 x 4", value: 8 },
+      { id: "pq2-3", display: "6", value: 6 },
+    ],
+    correctOrderIds: ["pq2-3", "pq2-1", "pq2-2"],
+    displayOrderIds: ["pq2-1", "pq2-2", "pq2-3"],
+    layoutPattern: "B",
+  },
+];
+
 function FullBubbleMockTestUI({
   currentSession,
   controller,
@@ -784,25 +807,34 @@ function FullBubbleMockTestUI({
 }: BubbleUIProps) {
   const timeLimitSeconds = controller?.config?.timeLimitSeconds || 15;
 
-  const [phase, setPhase] = useState<"intro" | "playing">("intro");
+  const [phase, setPhase] = useState<"intro" | "practice" | "playing">("intro");
   const [tutorialStep, setTutorialStep] = useState(1);
   const [demoSelected, setDemoSelected] = useState(false);
 
-  useEffect(() => {
-    if (phase === "intro" && tutorialStep === 3) {
-      const interval = setInterval(() => setDemoSelected(prev => !prev), 1000);
-      return () => clearInterval(interval);
-    }
-  }, [phase, tutorialStep]);
-
+  // Practice state
+  const [practiceIndex, setPracticeIndex] = useState(0);
+  const [practiceSelectedIds, setPracticeSelectedIds] = useState<string[]>([]);
+  const [practiceIsSubmitting, setPracticeIsSubmitting] = useState(false);
+  const [practiceRemainingSeconds, setPracticeRemainingSeconds] = useState(timeLimitSeconds);
 
   const [revealedCount, setRevealedCount] = useState(0);
+  const isAdvancingRef = useRef(false);
+  const practiceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (phase === "intro" && timer) {
       timer.stop();
     }
   }, [phase, timer]);
+
+  // Clean up any pending timeouts on unmount or phase change
+  useEffect(() => {
+    return () => {
+      if (practiceTimeoutRef.current) {
+        clearTimeout(practiceTimeoutRef.current);
+      }
+    };
+  }, [phase]);
 
   // Staged sequential reveal per question
   useEffect(() => {
@@ -817,7 +849,91 @@ function FullBubbleMockTestUI({
       clearTimeout(timer2);
       clearTimeout(timer3);
     };
-  }, [currentSession.currentItemIndex]);
+  }, [currentSession.currentItemIndex, phase, practiceIndex]);
+
+  // Demo selection toggle for instruction 3
+  useEffect(() => {
+    if (phase === "intro" && tutorialStep === 3) {
+      const interval = setInterval(() => setDemoSelected((prev) => !prev), 1000);
+      return () => clearInterval(interval);
+    }
+  }, [phase, tutorialStep]);
+
+  // Practice question advance handler
+  const advancePractice = useCallback(() => {
+    if (isAdvancingRef.current) return;
+    isAdvancingRef.current = true;
+    setPracticeIsSubmitting(true);
+
+    practiceTimeoutRef.current = setTimeout(() => {
+      setPracticeIndex((currentIdx) => {
+        if (currentIdx === 0) {
+          setPracticeSelectedIds([]);
+          setPracticeRemainingSeconds(timeLimitSeconds);
+          setPracticeIsSubmitting(false);
+          isAdvancingRef.current = false;
+          return 1;
+        } else {
+          // After Question 2 of 2 is complete, transition directly to the real assessment
+          setPracticeSelectedIds([]);
+          setPracticeIsSubmitting(false);
+          isAdvancingRef.current = false;
+          setPhase("playing");
+          if (onStartSession) {
+            onStartSession();
+          }
+          return 0;
+        }
+      });
+    }, 450);
+  }, [timeLimitSeconds, onStartSession]);
+
+  // Practice countdown timer
+  useEffect(() => {
+    if (phase !== "practice" || practiceIsSubmitting) return;
+
+    const interval = setInterval(() => {
+      setPracticeRemainingSeconds((prev: number) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          advancePractice();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [phase, practiceIndex, practiceIsSubmitting, advancePractice]);
+
+  // Practice bubble click handler
+  const handlePracticeBubbleClick = (id: string) => {
+    if (practiceIsSubmitting || isAdvancingRef.current) return;
+
+    if (practiceSelectedIds.includes(id)) {
+      setPracticeSelectedIds((prev) => prev.filter((sId) => sId !== id));
+      return;
+    }
+
+    const newSelections = [...practiceSelectedIds, id];
+    setPracticeSelectedIds(newSelections);
+
+    if (newSelections.length === 3) {
+      advancePractice();
+    }
+  };
+
+  const activeQ = phase === "practice"
+    ? (FIXED_PRACTICE_QUESTIONS[practiceIndex] || FIXED_PRACTICE_QUESTIONS[0])
+    : currentQ;
+
+  const activeSelectedIds = phase === "practice" ? practiceSelectedIds : selectedIds;
+  const activeIsSubmitting = phase === "practice" ? practiceIsSubmitting : isSubmitting;
+  const activeRemainingSeconds = phase === "intro"
+    ? timeLimitSeconds
+    : phase === "practice"
+    ? practiceRemainingSeconds
+    : remainingSeconds;
 
   // Constrained layout patterns designed specifically for the max-w-[540px] play area
   const patternA = [
@@ -845,17 +961,18 @@ function FullBubbleMockTestUI({
   ];
 
   let positions = patternA;
-  if (currentQ.layoutPattern === "B") positions = patternB;
-  else if (currentQ.layoutPattern === "C") positions = patternC;
-  else if (currentQ.layoutPattern === "D") positions = patternD;
-    if (phase === "intro") {
-      positions = [
-        "top-[19%] sm:top-[21%] left-[50%] -translate-x-1/2",
-        "top-[55%] sm:top-[55%] left-[25%] -translate-x-1/2",
-        "top-[55%] sm:top-[55%] left-[75%] -translate-x-1/2",
-        "top-[75%] left-[50%] -translate-x-1/2",
-      ];
-    }
+  if (activeQ.layoutPattern === "B") positions = patternB;
+  else if (activeQ.layoutPattern === "C") positions = patternC;
+  else if (activeQ.layoutPattern === "D") positions = patternD;
+
+  if (phase === "intro") {
+    positions = [
+      "top-[19%] sm:top-[21%] left-[50%] -translate-x-1/2",
+      "top-[55%] sm:top-[55%] left-[25%] -translate-x-1/2",
+      "top-[55%] sm:top-[55%] left-[75%] -translate-x-1/2",
+      "top-[75%] left-[50%] -translate-x-1/2",
+    ];
+  }
 
   const totalQuestions = currentSession.totalItems || 28;
   const currentItemNum = currentSession.currentItemIndex + 1;
@@ -874,8 +991,8 @@ function FullBubbleMockTestUI({
             Assessment Simulator
           </span>
           <span className="bg-neutral-800 text-neutral-300 text-xs px-2.5 py-1 rounded font-semibold tracking-wide border border-neutral-700">
-              Full Bubble Mock Test
-            </span>
+            Full Bubble Mock Test
+          </span>
         </div>
       </header>
 
@@ -886,107 +1003,119 @@ function FullBubbleMockTestUI({
         <div className="w-full bg-neutral-900 text-white px-5 py-3 rounded-t-lg flex items-center justify-between shadow-md select-none border-b border-neutral-800">
           <div className="flex items-center gap-2">
             <span className="font-semibold text-sm sm:text-base text-neutral-100 tracking-wide">
-              {phase === "playing" ? `Question ${currentItemNum} of ${totalQuestions}` : ""}
+              {phase === "practice"
+                ? `Question ${practiceIndex + 1} of 2`
+                : phase === "playing"
+                ? `Question ${currentItemNum} of ${totalQuestions}`
+                : ""}
             </span>
           </div>
 
           <div className="flex items-center gap-2">
             <span className="text-xs text-neutral-400 font-mono tracking-wider">
-              {phase === "playing" ? `${Math.round((currentItemNum / totalQuestions) * 100)}% COMPLETED` : ""}
+              {phase === "practice"
+                ? `${Math.round(((practiceIndex + 1) / 2) * 100)}% COMPLETED`
+                : phase === "playing"
+                ? `${Math.round((currentItemNum / totalQuestions) * 100)}% COMPLETED`
+                : ""}
             </span>
           </div>
         </div>
 
-                            {/* 3. Constrained Light Play Area */}
+        {/* 3. Constrained Light Play Area */}
         <div className="w-full bg-slate-100 border-x border-b border-slate-200 rounded-b-lg shadow-sm flex flex-col min-h-[480px] p-5 justify-between relative overflow-hidden">
 
-            {/* Instruction Panel Overlay */}
-              {phase === "intro" && (
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full bg-white border-b border-slate-200 shadow-md z-[60] pb-6">
-                  <div className="flex items-center justify-between p-4 min-h-[100px] sm:min-h-[120px]">
-                    {/* Left Arrow */}
-                    <button 
-                      onClick={() => setTutorialStep((prev) => prev > 1 ? prev - 1 : 1)}
-                      disabled={tutorialStep === 1}
-                      className={"w-12 h-12 flex items-center justify-center shrink-0 text-slate-400 hover:text-black transition-colors " + (tutorialStep === 1 ? "invisible" : "visible")}
-                      aria-label="Previous Instruction"
-                    >
-                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="m15 18-6-6 6-6"/>
-                      </svg>
-                    </button>
+          {/* Instruction Panel Overlay */}
+          {phase === "intro" && (
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full bg-white border-b border-slate-200 shadow-md z-[60] pb-6">
+              <div className="flex items-center justify-between p-4 min-h-[100px] sm:min-h-[120px]">
+                {/* Left Arrow */}
+                <button 
+                  onClick={() => setTutorialStep((prev) => (prev > 1 ? prev - 1 : 1))}
+                  disabled={tutorialStep === 1}
+                  className={"w-12 h-12 flex items-center justify-center shrink-0 text-slate-400 hover:text-black transition-colors " + (tutorialStep === 1 ? "invisible" : "visible")}
+                  aria-label="Previous Instruction"
+                >
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="m15 18-6-6 6-6"/>
+                  </svg>
+                </button>
 
-                    {/* Text Content */}
-                    <div className="flex-1 flex flex-col items-center justify-center text-center px-2 sm:px-4 text-slate-800 text-[15px] sm:text-[16px] font-medium leading-relaxed">
-                      {tutorialStep === 1 && (
-                        <p>Some bubbles are displayed. Select the bubbles in order from the <strong className="font-bold text-black">LOWEST</strong> to the <strong className="font-bold text-black">HIGHEST</strong> value.</p>
-                      )}
-                      {tutorialStep === 2 && (
-                        <p>Select a bubble by clicking on it. Your selected bubbles will be highlighted.</p>
-                      )}
-                      {tutorialStep === 3 && (
-                        <p>You can deselect a bubble by clicking on it again. However, you will automatically advance to the next question after the third bubble is selected.</p>
-                      )}
-                      {tutorialStep === 4 && (
-                        <p>Each set of bubbles has a time limit, indicated by the timer at the bottom of the screen.</p>
-                      )}
-                      {tutorialStep === 5 && (
-                        <div className="flex flex-col items-center gap-4">
-                          <p>
-                            The practice exercise will have 2 questions in total.<br/><br/>
-                            So you should take this opportunity to practice how to navigate.
-                          </p>
-                          <button onClick={() => {
-                            setPhase("playing");
-                            if (onStartSession) onStartSession();
-                          }} className="bg-black text-white py-2.5 px-8 rounded font-semibold transition-transform active:scale-95 text-sm tracking-wide">
-                            PRACTICE
-                          </button>
-                        </div>
-                      )}
+                {/* Text Content */}
+                <div className="flex-1 flex flex-col items-center justify-center text-center px-2 sm:px-4 text-slate-800 text-[15px] sm:text-[16px] font-medium leading-relaxed">
+                  {tutorialStep === 1 && (
+                    <p>Some bubbles are displayed. Select the bubbles in order from the <strong className="font-bold text-black">LOWEST</strong> to the <strong className="font-bold text-black">HIGHEST</strong> value.</p>
+                  )}
+                  {tutorialStep === 2 && (
+                    <p>Select a bubble by clicking on it. Your selected bubbles will be highlighted.</p>
+                  )}
+                  {tutorialStep === 3 && (
+                    <p>You can deselect a bubble by clicking on it again. However, you will automatically advance to the next question after the third bubble is selected.</p>
+                  )}
+                  {tutorialStep === 4 && (
+                    <p>Each set of bubbles has a time limit, indicated by the timer at the bottom of the screen.</p>
+                  )}
+                  {tutorialStep === 5 && (
+                    <div className="flex flex-col items-center gap-4">
+                      <p>
+                        The practice exercise will have 2 questions in total.<br/><br/>
+                        So you should take this opportunity to practice how to navigate.
+                      </p>
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          setPhase("practice");
+                          setPracticeIndex(0);
+                          setPracticeSelectedIds([]);
+                          setPracticeRemainingSeconds(timeLimitSeconds);
+                          setPracticeIsSubmitting(false);
+                          isAdvancingRef.current = false;
+                        }} 
+                        className="bg-black text-white py-2.5 px-8 rounded font-semibold transition-transform active:scale-95 text-sm tracking-wide"
+                      >
+                        PRACTICE
+                      </button>
                     </div>
-
-                    {/* Right Arrow */}
-                    <button 
-                      onClick={() => setTutorialStep((prev) => prev < 5 ? prev + 1 : 5)}
-                      disabled={tutorialStep === 5}
-                      className={"w-12 h-12 flex items-center justify-center shrink-0 text-slate-400 hover:text-black transition-colors " + (tutorialStep === 5 ? "invisible" : "visible")}
-                      aria-label="Next Instruction"
-                    >
-                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="m9 18 6-6-6-6"/>
-                      </svg>
-                    </button>
-                  </div>
-                  
-                  {/* Progress Dots */}
-                  <div className="absolute bottom-2 left-0 right-0 flex justify-center items-center gap-2">
-                    {[1, 2, 3, 4, 5].map((step) => (
-                      <div 
-                        key={step} 
-                        className={"rounded-full transition-colors " + (tutorialStep === step ? "w-1.5 h-1.5 bg-black" : "w-1.5 h-1.5 bg-transparent border border-slate-400")} 
-                      />
-                    ))}
-                  </div>
+                  )}
                 </div>
-              )}
+
+                {/* Right Arrow */}
+                <button 
+                  onClick={() => setTutorialStep((prev) => (prev < 5 ? prev + 1 : 5))}
+                  disabled={tutorialStep === 5}
+                  className={"w-12 h-12 flex items-center justify-center shrink-0 text-slate-400 hover:text-black transition-colors " + (tutorialStep === 5 ? "invisible" : "visible")}
+                  aria-label="Next Instruction"
+                >
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="m9 18 6-6-6-6"/>
+                  </svg>
+                </button>
+              </div>
+              
+              {/* Progress Dots */}
+              <div className="absolute bottom-2 left-0 right-0 flex justify-center items-center gap-2">
+                {[1, 2, 3, 4, 5].map((step) => (
+                  <div 
+                    key={step} 
+                    className={"rounded-full transition-colors " + (tutorialStep === step ? "w-1.5 h-1.5 bg-black" : "w-1.5 h-1.5 bg-transparent border border-slate-400")} 
+                  />
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Step 4 dim overlay */}
           {phase === "intro" && tutorialStep === 4 && <div className="absolute inset-0 bg-black/40 z-[50] pointer-events-none rounded-b-lg" />}
 
           {/* Bubble Play Area Canvas with Upward Exit Animation */}
           <div className="relative w-full h-[460px] sm:h-[500px] my-1 select-none overflow-hidden">
-              
-
-
-
-            {currentQ.displayOrderIds.map((id, index) => {
-              const expr = currentQ.expressions.find((e) => e.id === id)!;
-              const isSelected = selectedIds.includes(id) || (phase === "intro" && tutorialStep === 2 && index === 0) || (phase === "intro" && tutorialStep === 3 && index === 0 && demoSelected);
+            {activeQ.displayOrderIds.map((id, index) => {
+              const expr = activeQ.expressions.find((e) => e.id === id)!;
+              const isSelected = activeSelectedIds.includes(id) || (phase === "intro" && tutorialStep === 2 && index === 0) || (phase === "intro" && tutorialStep === 3 && index === 0 && demoSelected);
               const isRevealed = index < revealedCount;
 
               let animationClass = "translate-y-6 opacity-0 pointer-events-none";
-              if (isSubmitting) {
+              if (activeIsSubmitting) {
                 animationClass = "-translate-y-24 opacity-0 transition-all duration-400 ease-in pointer-events-none";
               } else if (isRevealed || phase === "intro") {
                 animationClass = "translate-y-0 opacity-100 transition-all duration-300 ease-out";
@@ -1004,11 +1133,13 @@ function FullBubbleMockTestUI({
                   <button
                     type="button"
                     onClick={() => {
-                      if (phase === "playing" && isRevealed && revealedCount === 3 && !isSubmitting) {
+                      if (phase === "practice" && isRevealed && revealedCount === 3 && !activeIsSubmitting) {
+                        handlePracticeBubbleClick(id);
+                      } else if (phase === "playing" && isRevealed && revealedCount === 3 && !activeIsSubmitting) {
                         onBubbleClick(id);
                       }
                     }}
-                    disabled={isSubmitting || revealedCount < 3 || phase === "intro"}
+                    disabled={activeIsSubmitting || revealedCount < 3 || phase === "intro"}
                     aria-label={`Bubble ${expr.display}`}
                     className={`relative flex items-center justify-center font-bold text-lg sm:text-xl transition-all duration-200 active:scale-95 cursor-pointer focus:outline-none ${bubbleStyleClass}`}
                   >
@@ -1019,7 +1150,6 @@ function FullBubbleMockTestUI({
             })}
           </div>
 
-            
           {/* 4. Bottom Timer & Instruction Bar */}
           <div className="flex items-center justify-center gap-3 pt-4 pb-1 px-2 border-t border-slate-100">
 
@@ -1041,7 +1171,7 @@ function FullBubbleMockTestUI({
                 <path
                   className="text-neutral-900 transition-all duration-1000 ease-linear"
                   strokeDasharray={`${(
-                    ((phase === "intro" ? timeLimitSeconds : remainingSeconds) / timeLimitSeconds) *
+                    (activeRemainingSeconds / timeLimitSeconds) *
                     100
                   ).toFixed(2)}, 100`}
                   d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
@@ -1052,7 +1182,7 @@ function FullBubbleMockTestUI({
               </svg>
 
               <span className="text-lg font-bold text-neutral-900 font-mono">
-                {phase === "intro" ? timeLimitSeconds : remainingSeconds}
+                {activeRemainingSeconds}
               </span>
             </div>
 
@@ -1079,11 +1209,10 @@ function FullBubbleMockTestUI({
   );
 }
 
-
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 // Full Mock Test UI (EXPERIMENTAL & SAFE TO MODIFY)
 // Isolated developmental copy of Full Challenge UI for experimentation.
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 
 function FullMockTestUI({
   currentSession,
