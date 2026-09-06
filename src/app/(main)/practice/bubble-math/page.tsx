@@ -113,7 +113,7 @@ export default function BubbleMathPracticeSetup() {
           <p className="text-muted-foreground">Select a practice configuration below. These are simulator configurations for practicing your numerical dexterity.</p>
           
           <div className="grid gap-3">
-            {Object.entries(VARIANTS).filter(([key]) => key !== "full-mock-test").map(([key, variant]) => (
+            {Object.entries(VARIANTS).filter(([key]) => key !== "full-mock-test" && key !== "full-challenge").map(([key, variant]) => (
               <Button 
                 key={key}
                 variant={selectedVariant === key ? "default" : "outline"}

@@ -19,8 +19,9 @@ describe("Memory Maze Generator", () => {
     const questions = generateMemoryMazeQuestions(rng, 5, 8, 10);
     
     questions.forEach(q => {
-      expect(q.correctPath.length).toBe(8);
-      expect(validatePath(5, q.correctPath)).toBe(true);
+      expect(q.correctPath).toBeDefined();
+      expect(q.correctPath!.length).toBe(8);
+      expect(validatePath(5, q.correctPath!)).toBe(true);
     });
   });
   
@@ -38,8 +39,9 @@ describe("Memory Maze Generator", () => {
       expect(questions.length).toBe(250);
       
       questions.forEach(q => {
-        expect(q.correctPath.length).toBe(diff.len);
-        expect(validatePath(diff.size, q.correctPath)).toBe(true);
+        expect(q.correctPath).toBeDefined();
+        expect(q.correctPath!.length).toBe(diff.len);
+        expect(validatePath(diff.size, q.correctPath!)).toBe(true);
       });
     }
   });

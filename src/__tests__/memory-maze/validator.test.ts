@@ -53,6 +53,10 @@ describe("Memory Maze Validator", () => {
     const question: MemoryMazeQuestion = {
       id: "q1",
       gridSize: 3,
+      gridDimensions: { rows: 3, cols: 3 },
+      playerStartPosition: { row: 0, col: 0 },
+      keyPosition: { row: 0, col: 1 },
+      doorPosition: { row: 1, col: 1 },
       pathLength: 3,
       correctPath: [
         { r: 0, c: 0, id: "r0c0" },

@@ -8,78 +8,71 @@ import { useGameSessionStore } from "@/lib/store/game-session";
 import { MemoryMazeConfig } from "@/lib/games/memory-maze/types";
 import { registerMemoryMaze } from "@/lib/games/memory-maze";
 
-const VARIANTS: Record<string, Partial<MemoryMazeConfig>> = {
-  "learn": {
-    variantId: "learn",
+export const MEMORY_MAZE_VARIANTS: Record<string, Partial<MemoryMazeConfig> & { label?: string }> = {
+  "practice-1": {
+    variantId: "practice-1",
     difficulty: "EASY",
     memoryMazeDifficulty: "EASY",
-    timeLimitSeconds: 15,
+    timeLimitSeconds: 240,
     itemCount: 5,
     gridSize: 3,
-    pathLength: 4,
-    memorizationTimeMs: 4000,
-    responseTimeMs: 15000,
+    label: "Practice Test 1"
   },
-  "guided-practice": {
-    variantId: "guided-practice",
+  "practice-2": {
+    variantId: "practice-2",
     difficulty: "MEDIUM",
     memoryMazeDifficulty: "MEDIUM",
-    timeLimitSeconds: 10,
-    itemCount: 10,
+    timeLimitSeconds: 240,
+    itemCount: 5,
     gridSize: 4,
-    pathLength: 6,
-    memorizationTimeMs: 3000,
-    responseTimeMs: 10000,
+    label: "Practice Test 2"
   },
-  "timed-practice": {
-    variantId: "timed-practice",
+  "practice-3": {
+    variantId: "practice-3",
     difficulty: "HARD",
     memoryMazeDifficulty: "HARD",
-    timeLimitSeconds: 8,
-    itemCount: 15,
+    timeLimitSeconds: 240,
+    itemCount: 5,
     gridSize: 4,
-    pathLength: 8,
-    memorizationTimeMs: 2500,
-    responseTimeMs: 8000,
+    label: "Practice Test 3"
   },
-  "challenge": {
-    variantId: "challenge",
+  "full-memory-mock-test": {
+    variantId: "full-memory-mock-test",
     difficulty: "HARD",
     memoryMazeDifficulty: "VERY_HARD",
-    timeLimitSeconds: 10,
-    itemCount: 20,
-    gridSize: 5,
-    pathLength: 10,
-    memorizationTimeMs: 2000,
-    responseTimeMs: 10000,
+    timeLimitSeconds: 240,
+    itemCount: 5,
+    gridSize: 3,
+    label: "Full Memory Mock Test"
   }
 };
+
+const VARIANTS = MEMORY_MAZE_VARIANTS;
 
 export default function MemoryMazePracticeSetup() {
   const router = useRouter();
   const { initializeSession } = useGameSessionStore();
-  const [selectedVariant, setSelectedVariant] = useState<string>("guided-practice");
+  const [selectedVariant, setSelectedVariant] = useState<string | null>(null);
 
   useEffect(() => {
     registerMemoryMaze();
   }, []);
 
   const handleLaunch = () => {
+    if (!selectedVariant) return;
     const variantConfig = VARIANTS[selectedVariant];
+    if (!variantConfig) return;
     
     const config: MemoryMazeConfig = {
       gameId: "memory-maze",
       variantId: variantConfig.variantId!,
-      difficulty: variantConfig.difficulty!,
-      memoryMazeDifficulty: variantConfig.memoryMazeDifficulty!,
+      difficulty: variantConfig.difficulty || "EASY",
+      memoryMazeDifficulty: variantConfig.memoryMazeDifficulty || "EASY",
       mode: "TIMED_PRACTICE",
-      itemCount: variantConfig.itemCount!,
-      timeLimitSeconds: variantConfig.timeLimitSeconds!,
+      itemCount: variantConfig.itemCount || 3,
+      timeLimitSeconds: 240,
       instructionTimeSeconds: 0,
-      gridSize: variantConfig.gridSize!,
-      pathLength: variantConfig.pathLength!,
-      memorizationTimeMs: variantConfig.memorizationTimeMs!,
-      responseTimeMs: variantConfig.responseTimeMs!,
+      gridSize: variantConfig.gridSize || 3,
       scoringConfig: {
         mode: "TIMED_PRACTICE",
         weights: { accuracy: 1, speed: 1, completion: 1 }
@@ -92,7 +85,7 @@ export default function MemoryMazePracticeSetup() {
     const seed = `seed-${Date.now()}`;
 
     initializeSession(sessionId, config, seed, () => {
-      // MemoryMazeGame handles timeout locally in recall phase
+      // Game handles timeout locally
     });
 
     router.push("/assessment/memory-maze");
@@ -102,7 +95,7 @@ export default function MemoryMazePracticeSetup() {
     <div className="container mx-auto py-12 flex justify-center">
       <Card className="w-full max-w-lg">
         <CardHeader>
-          <CardTitle className="text-3xl font-bold">Memory Maze Practice</CardTitle>
+          <CardTitle className="text-3xl font-bold">Memory Maze</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <p className="text-muted-foreground">Select a practice configuration below. These are simulator configurations for practicing your spatial and sequence memory.</p>
@@ -115,16 +108,16 @@ export default function MemoryMazePracticeSetup() {
                 className="justify-start h-auto py-4 px-6 flex-col items-start gap-1"
                 onClick={() => setSelectedVariant(key)}
               >
-                <div className="font-bold text-lg">{key.replace(/-/g, " ").replace(/\b\w/g, l => l.toUpperCase())}</div>
+                <div className="font-bold text-lg">{variant.label || key.replace(/-/g, " ").replace(/\b\w/g, l => l.toUpperCase())}</div>
                 <div className="text-sm font-normal opacity-80">
-                  {variant.itemCount} grids • {variant.gridSize}x{variant.gridSize} • path of {variant.pathLength}
+                  {variant.itemCount} mazes • {variant.gridSize}x{variant.gridSize} grid • 4:00 timer
                 </div>
               </Button>
             ))}
           </div>
         </CardContent>
         <CardFooter>
-          <Button size="lg" className="w-full h-14 text-lg" onClick={handleLaunch}>Launch Practice</Button>
+          <Button size="lg" className="w-full h-14 text-lg" onClick={handleLaunch} disabled={!selectedVariant}>Launch Practice</Button>
         </CardFooter>
       </Card>
     </div>

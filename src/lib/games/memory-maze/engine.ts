@@ -7,32 +7,47 @@ import {
 } from "./types";
 import { generateMemoryMazeQuestions } from "./generator";
 import { validateMemoryMazeAction } from "./validator";
+import { getMazesForVariant } from "./practice-mazes";
 
 export const memoryMazeDefinition: GameDefinition<MemoryMazeConfig, MemoryMazeState, MemoryMazeActionPayload> = {
   id: "memory-maze",
   name: "Memory Maze",
-  description: "Memorize the valid path through the grid and reproduce it.",
+  description: "Navigate through the maze, collect the key, and reach the door.",
   category: "Spatial Memory",
-  variants: ["learn", "guided-practice", "timed-practice", "challenge"],
+  variants: ["learn", "guided-practice", "timed-practice", "challenge", "practice-1", "practice-2", "practice-3", "full-memory-mock-test"],
   difficultyLevels: ["EASY", "MEDIUM", "HARD", "VARIABLE"],
 
   createInitialState: (config: MemoryMazeConfig, seed: string): MemoryMazeState => {
-    const rng = new SeededRNG(seed);
-    const questions = generateMemoryMazeQuestions(
-      rng,
-      config.gridSize,
-      config.pathLength,
-      config.itemCount
-    );
+    if (config.variantId && (
+      config.variantId.startsWith("practice-") || 
+      config.variantId === "full-memory-mock-test"
+    )) {
+      const questions = getMazesForVariant(config.variantId, seed);
+      return { questions };
+    }
 
-    return {
-      questions
-    };
+    if (config.gridSize && config.pathLength && config.itemCount) {
+      const rng = new SeededRNG(seed);
+      const questions = generateMemoryMazeQuestions(
+        rng,
+        config.gridSize,
+        config.pathLength,
+        config.itemCount
+      );
+      return { questions };
+    }
+
+    const questions = getMazesForVariant(config.variantId || "practice-1", seed);
+    return { questions };
   },
 
   validateAction: (state: MemoryMazeState, action: GameAction<MemoryMazeActionPayload>): boolean => {
     const question = state.questions[action.itemIndex];
     if (!question) return false;
+    if (action.payload.isTimeout) return false;
+    if (action.payload.completed !== undefined) {
+      return !!action.payload.completed && !!action.payload.keyCollected;
+    }
     return validateMemoryMazeAction(question, action.payload);
   },
 

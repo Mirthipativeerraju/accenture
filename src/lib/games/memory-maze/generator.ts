@@ -34,6 +34,10 @@ export function generateMemoryMazeQuestions(
     questions.push({
       id: questionId,
       gridSize,
+      gridDimensions: { rows: gridSize, cols: gridSize },
+      playerStartPosition: { row: path[0].r, col: path[0].c },
+      keyPosition: { row: path[1].r, col: path[1].c },
+      doorPosition: { row: path[path.length - 1].r, col: path[path.length - 1].c },
       pathLength,
       correctPath: path
     });

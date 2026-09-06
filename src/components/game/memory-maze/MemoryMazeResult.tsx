@@ -11,7 +11,7 @@ import { Trophy, Clock, Zap, Target } from "lucide-react";
 export function MemoryMazeResult() {
   const { currentSession } = useGameSessionStore();
   
-  if (!currentSession || currentSession.status !== "COMPLETED") {
+  if (!currentSession || !["COMPLETED", "TIMEOUT"].includes(currentSession.status)) {
     return null;
   }
   
