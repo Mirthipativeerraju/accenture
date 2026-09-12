@@ -69,7 +69,7 @@ export function BubbleMathResult({ result, onRestart }: BubbleMathResultProps) {
               router.push("/practice/bubble-math");
             }}
           >
-            {result.variantId?.startsWith("practice-") ? "Choose Another Practice" : "Change Variant"}
+            {result.variantId?.startsWith("practice-") ? "Choose Another Practice" : "Choose Another Practice"}
           </Button>
           {onRestart && (
             <Button size="lg" onClick={onRestart}>

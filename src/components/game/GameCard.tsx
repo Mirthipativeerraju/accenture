@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Brain, Calculator, Navigation } from "lucide-react";
+import { Brain, Calculator, Compass } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +15,7 @@ interface GameCardProps {
 }
 
 export function GameCard({ id, title, description, skills, difficulty }: GameCardProps) {
-  const Icon = id === "memory-maze" ? Brain : id === "bubble-math" ? Calculator : Navigation;
+  const Icon = id === "memory-maze" ? Brain : id === "bubble-math" ? Calculator : Compass;
   
   return (
     <Card className="flex flex-col h-full hover:shadow-md transition-shadow">

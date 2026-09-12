@@ -1,59 +1,68 @@
+"use client";
+
 import React from "react";
 import { RotateCw, ArrowLeftRight, Check } from "lucide-react";
 
-interface ControlsProps {
+interface PathFinderControlsProps {
   onRotate: () => void;
-  onToggleDirection: () => void;
-  onSubmit: () => void;
+  onChangeDirection: () => void;
+  onCheck: () => void;
+  hasSelection: boolean;
   disabled?: boolean;
-  direction?: "FORWARD" | "REVERSE";
 }
 
 export function PathFinderControls({
   onRotate,
-  onToggleDirection,
-  onSubmit,
+  onChangeDirection,
+  onCheck,
+  hasSelection,
   disabled = false,
-  direction = "FORWARD",
-}: ControlsProps) {
+}: PathFinderControlsProps) {
   return (
-    <div className="flex items-center justify-center gap-3 select-none">
-      {/* 1. Rotate Control */}
+    <div className="flex items-center gap-3">
+      {/* 1. ROTATE BUTTON */}
       <button
         type="button"
         onClick={onRotate}
-        disabled={disabled}
-        className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg bg-[#555555] hover:bg-[#444444] text-white flex items-center justify-center shadow-sm active:scale-95 transition-all duration-150 disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
-        title="Rotate Selected Block (Clockwise)"
-        aria-label="Rotate Selected Block"
-      >
-        <RotateCw className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.2]" />
-      </button>
-
-      {/* 2. Change / Reverse Route Direction */}
-      <button
-        type="button"
-        onClick={onToggleDirection}
-        disabled={disabled}
-        className={`w-12 h-12 sm:w-14 sm:h-14 rounded-lg bg-[#555555] hover:bg-[#444444] text-white flex items-center justify-center shadow-sm active:scale-95 transition-all duration-150 disabled:opacity-40 disabled:pointer-events-none cursor-pointer ${
-          direction === "REVERSE" ? "ring-2 ring-yellow-400" : ""
+        disabled={!hasSelection || disabled}
+        aria-label="Rotate block clockwise"
+        className={`w-10 h-10 rounded-md flex items-center justify-center transition-all ${
+          hasSelection && !disabled
+            ? "bg-[#333333] hover:bg-[#222222] active:scale-95 text-white cursor-pointer"
+            : "bg-[#333333]/50 text-white/40 cursor-not-allowed"
         }`}
-        title={`Change Route Direction (Currently ${direction})`}
-        aria-label="Change Route Direction"
       >
-        <ArrowLeftRight className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.2]" />
+        <RotateCw className="w-5 h-5 stroke-[2.2]" />
       </button>
 
-      {/* 3. Submit / Check */}
+      {/* 2. CHANGE ROUTE DIRECTION BUTTON */}
       <button
         type="button"
-        onClick={onSubmit}
-        disabled={disabled}
-        className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg bg-[#555555] hover:bg-[#444444] text-white flex items-center justify-center shadow-sm active:scale-95 transition-all duration-150 disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
-        title="Submit / Validate Route"
-        aria-label="Submit Route"
+        onClick={onChangeDirection}
+        disabled={!hasSelection || disabled}
+        aria-label="Change route direction"
+        className={`w-10 h-10 rounded-md flex items-center justify-center transition-all ${
+          hasSelection && !disabled
+            ? "bg-[#333333] hover:bg-[#222222] active:scale-95 text-white cursor-pointer"
+            : "bg-[#333333]/50 text-white/40 cursor-not-allowed"
+        }`}
       >
-        <Check className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.5]" />
+        <ArrowLeftRight className="w-5 h-5 stroke-[2.2]" />
+      </button>
+
+      {/* 3. CHECK BUTTON */}
+      <button
+        type="button"
+        onClick={onCheck}
+        disabled={disabled}
+        aria-label="Submit path"
+        className={`w-10 h-10 rounded-md flex items-center justify-center transition-all ${
+          !disabled
+            ? "bg-[#333333] hover:bg-[#222222] active:scale-95 text-white cursor-pointer"
+            : "bg-[#333333]/50 text-white/40 cursor-not-allowed"
+        }`}
+      >
+        <Check className="w-5 h-5 stroke-[2.5]" />
       </button>
     </div>
   );

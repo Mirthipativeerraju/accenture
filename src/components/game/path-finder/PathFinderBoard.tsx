@@ -1,189 +1,98 @@
+"use client";
+
 import React from "react";
-import { ArrowDirection, PathFinderQuestion } from "@/lib/games/path-finder/types";
-import { getRotatedCell, DIRECTION_ANGLES } from "@/lib/games/path-finder/validator";
-import { PathFinderMarker, PathFinderMovingRocket } from "./PathFinderMarkers";
+import { PuzzleDefinition, TileState } from "@/lib/games/path-finder/types";
+import { PathFinderTile } from "./PathFinderTile";
 
-interface BoardProps {
-  question: PathFinderQuestion;
-  rotations: number[][];
-  selectedBlock: { br: number; bc: number } | null;
-  onSelectBlock: (br: number, bc: number) => void;
-  highlightedPath?: { r: number; c: number }[];
-  disabled?: boolean;
-  direction?: "FORWARD" | "REVERSE";
-  rocketState?: { x: number; y: number; angle: number } | null;
-}
-
-function ArrowIcon({ direction }: { direction: ArrowDirection }) {
-  const angle = DIRECTION_ANGLES[direction] ?? 0;
-
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="w-4 h-4 sm:w-5 sm:h-5 text-white transition-transform duration-150"
-      style={{ transform: `rotate(${angle}deg)` }}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <line x1="4" y1="12" x2="20" y2="12" />
-      <polyline points="13 5 20 12 13 19" />
-    </svg>
-  );
+interface PathFinderBoardProps {
+  puzzle: PuzzleDefinition;
+  tileStates: Record<string, TileState>;
+  selectedTileId: string | null;
+  onSelectTile: (tileId: string) => void;
+  animatingRocket?: { x: number; y: number; angle: number } | null;
 }
 
 export function PathFinderBoard({
-  question,
-  rotations,
-  selectedBlock,
-  onSelectBlock,
-  highlightedPath = [],
-  disabled = false,
-  direction = "FORWARD",
-  rocketState = null,
-}: BoardProps) {
-  const { blockGridSize, blockSize, totalGridSize, start, destination } = question;
-
-  const highlightedSet = new Set(highlightedPath.map((p) => `${p.r},${p.c}`));
+  puzzle,
+  tileStates,
+  selectedTileId,
+  onSelectTile,
+  animatingRocket,
+}: PathFinderBoardProps) {
+  // Start and Destination row calculations for vertical positioning
+  const startRowRatio = (puzzle.startPos.row + 0.5) / puzzle.gridRows;
+  const destRowRatio = (puzzle.destinationPos.row + 0.5) / puzzle.gridRows;
 
   return (
-    <div className="relative flex items-center justify-center p-8 sm:p-10 select-none">
-      {/* Outer Board Frame */}
+    <div className="relative flex items-center justify-center py-2 px-10">
+      {/* START ICON on the LEFT */}
       <div
-        data-testid="path-finder-board"
-        className="w-[310px] h-[310px] sm:w-[400px] sm:h-[400px] md:w-[440px] md:h-[440px] bg-white border-2 border-neutral-400 grid shadow-md relative overflow-visible"
+        className="absolute left-0 -translate-y-1/2 flex items-center pr-1 pointer-events-none z-10"
+        style={{ top: `${startRowRatio * 100}%` }}
       >
-        {/* 1. Start Marker outside board */}
-        {start.side === "LEFT" && (
-          <div
-            className="absolute -left-9 sm:-left-10 z-20 pointer-events-none"
-            style={{
-              top: `${((start.index + 0.5) / totalGridSize) * 100}%`,
-              transform: "translateY(-50%)",
-            }}
-          >
-            <PathFinderMarker endpoint={start} isStart={true} />
-          </div>
-        )}
-        {start.side === "TOP" && (
-          <div
-            className="absolute -top-9 sm:-top-10 z-20 pointer-events-none"
-            style={{
-              left: `${((start.index + 0.5) / totalGridSize) * 100}%`,
-              transform: "translateX(-50%)",
-            }}
-          >
-            <PathFinderMarker endpoint={start} isStart={true} />
-          </div>
-        )}
-
-        {/* 2. Destination Marker outside board */}
-        {destination.side === "RIGHT" && (
-          <div
-            className="absolute -right-9 sm:-right-10 z-20 pointer-events-none"
-            style={{
-              top: `${((destination.index + 0.5) / totalGridSize) * 100}%`,
-              transform: "translateY(-50%)",
-            }}
-          >
-            <PathFinderMarker endpoint={destination} isStart={false} />
-          </div>
-        )}
-        {destination.side === "BOTTOM" && (
-          <div
-            className="absolute -bottom-9 sm:-bottom-10 z-20 pointer-events-none"
-            style={{
-              left: `${((destination.index + 0.5) / totalGridSize) * 100}%`,
-              transform: "translateX(-50%)",
-            }}
-          >
-            <PathFinderMarker endpoint={destination} isStart={false} />
-          </div>
-        )}
-
-        {/* 3. Moving Rocket Layer */}
-        {rocketState && (
-          <div
-            className="absolute z-30 pointer-events-none"
-            style={{
-              left: `${rocketState.x}%`,
-              top: `${rocketState.y}%`,
-              transform: "translate(-50%, -50%)",
-              transition: "left 100ms linear, top 100ms linear",
-            }}
-          >
-            <PathFinderMovingRocket angle={rocketState.angle} />
-          </div>
-        )}
-
-        {/* Render block grid layout */}
-        <div
-          className="grid w-full h-full"
-          style={{
-            gridTemplateColumns: `repeat(${blockGridSize}, 1fr)`,
-            gridTemplateRows: `repeat(${blockGridSize}, 1fr)`,
-          }}
+        <svg
+          viewBox="0 0 40 40"
+          className="w-7 h-7 sm:w-8 sm:h-8 text-slate-800 dark:text-slate-200 fill-current"
+          aria-label="Start position"
         >
-          {Array.from({ length: blockGridSize }).map((_, br) =>
-            Array.from({ length: blockGridSize }).map((_, bc) => {
-              const isSelected = selectedBlock?.br === br && selectedBlock?.bc === bc;
-              const blockRot = rotations?.[br]?.[bc] ?? 0;
-              const block = question.blocks[br][bc];
+          <path d="M4 14 L18 14 L28 20 L18 26 L4 26 L8 20 Z" />
+          <circle cx="14" cy="20" r="3" className="fill-white" />
+          <line x1="2" y1="20" x2="6" y2="20" stroke="white" strokeWidth="2" />
+        </svg>
+      </div>
 
-              return (
-                <div
-                  key={`block-${br}-${bc}`}
-                  data-testid={`block-${br}-${bc}`}
-                  onClick={() => !disabled && onSelectBlock(br, bc)}
-                  className={`relative grid cursor-pointer transition-all duration-150 ${
-                    isSelected ? "ring-2 ring-yellow-400 z-10" : "border border-neutral-300"
-                  }`}
-                  style={{
-                    gridTemplateColumns: `repeat(${blockSize}, 1fr)`,
-                    gridTemplateRows: `repeat(${blockSize}, 1fr)`,
-                  }}
-                >
-                  {Array.from({ length: blockSize }).map((_, lr) =>
-                    Array.from({ length: blockSize }).map((_, lc) => {
-                      const gr = br * blockSize + lr;
-                      const gc = bc * blockSize + lc;
-                      const isPathHighlighted = highlightedSet.has(`${gr},${gc}`);
+      {/* DESTINATION ICON on the RIGHT */}
+      <div
+        className="absolute right-0 -translate-y-1/2 flex items-center pl-1 pointer-events-none z-10"
+        style={{ top: `${destRowRatio * 100}%` }}
+      >
+        <svg
+          viewBox="0 0 40 40"
+          className="w-7 h-7 sm:w-8 sm:h-8 text-slate-800 dark:text-slate-200 fill-current"
+          aria-label="Destination position"
+        >
+          <circle cx="20" cy="20" r="13" fill="none" stroke="currentColor" strokeWidth="2.5" />
+          <circle cx="20" cy="20" r="7" />
+          <circle cx="16" cy="16" r="2.5" className="fill-white" />
+        </svg>
+      </div>
 
-                      // Compute canonical rotated cell using shared helper
-                      const rotatedCell = getRotatedCell(block, lr, lc, blockRot);
-                      const isActive = rotatedCell.active;
-                      const dir = rotatedCell.direction;
+      {/* 9x9 PUZZLE BOARD CONTAINER (3x3 grid of 3x3 tiles, total 378px x 378px) */}
+      <div className="relative w-[378px] h-[378px] grid grid-cols-3 grid-rows-3 border-[3px] border-[#9ca3af] bg-white dark:bg-slate-900 shadow-sm select-none">
+        {puzzle.tiles.map((tile) => {
+          const isSelected = selectedTileId === tile.id;
+          const state = tileStates[tile.id] || { rotation: 0, directionReversed: false };
 
-                      return (
-                        <div
-                          key={`cell-${gr}-${gc}`}
-                          data-testid={`cell-${gr}-${gc}`}
-                          data-cell-row={gr}
-                          data-cell-col={gc}
-                          className={`flex items-center justify-center border border-slate-200 transition-colors duration-150 relative ${
-                            isActive
-                              ? isPathHighlighted
-                                ? "bg-emerald-600 text-white shadow-inner"
-                                : "bg-[#757575] text-white"
-                              : "bg-white"
-                          }`}
-                        >
-                          {isActive && dir && (
-                            <div className="flex items-center justify-center transition-transform duration-150">
-                              <ArrowIcon direction={dir} />
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              );
-            })
-          )}
-        </div>
+          return (
+            <PathFinderTile
+              key={tile.id}
+              tile={tile}
+              state={state}
+              isSelected={isSelected}
+              onSelect={onSelectTile}
+            />
+          );
+        })}
+
+        {/* ROCKET ANIMATION OVERLAY */}
+        {animatingRocket && (
+          <div
+            className="absolute pointer-events-none z-30 transition-all duration-100 ease-linear flex items-center justify-center w-8 h-8"
+            style={{
+              left: `${animatingRocket.x}px`,
+              top: `${animatingRocket.y}px`,
+              transform: `translate(-50%, -50%) rotate(${animatingRocket.angle}deg)`,
+            }}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="w-7 h-7 text-amber-500 fill-current drop-shadow-md"
+            >
+              <path d="M12 2.5s3 3.5 3 7.5c0 2-.5 4-1.5 5.5l1.5 3.5-3-1.5-3 1.5 1.5-3.5C9.5 14 9 12 9 10c0-4 3-7.5 3-7.5z" />
+              <circle cx="12" cy="8" r="1.5" className="fill-white" />
+            </svg>
+          </div>
+        )}
       </div>
     </div>
   );

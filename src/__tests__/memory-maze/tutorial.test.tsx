@@ -469,7 +469,6 @@ describe("Memory Maze Flow Integration: Tutorial -> Practice 1 -> Completion Ove
     // Results screen is shown!
     expect(screen.getByText("Memory Maze Results")).toBeDefined();
     expect(screen.getByText(/Assessment Score/i)).toBeDefined();
-    expect(screen.getByText("Play Again")).toBeDefined();
     expect(screen.getByText("Back to Practice")).toBeDefined();
   });
 });

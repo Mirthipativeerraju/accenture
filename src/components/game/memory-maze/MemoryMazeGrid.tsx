@@ -22,6 +22,7 @@ interface MemoryMazeGridProps {
   disabled?: boolean;
   showArrows?: boolean;
   gridSize?: number;
+  pointerPosition?: Position | null;
 }
 
 export function MemoryMazeGrid({
@@ -42,6 +43,7 @@ export function MemoryMazeGrid({
   disabled = false,
   showArrows = false,
   gridSize = 3,
+  pointerPosition = null,
 }: MemoryMazeGridProps) {
   const rows = [];
 
@@ -481,7 +483,7 @@ export function MemoryMazeGrid({
   }
 
   return (
-    <div className="w-[300px] h-[300px] sm:w-[340px] sm:h-[340px] bg-white border-[4px] border-[#b8b8b8] rounded-[5px] shadow-none select-none overflow-visible mx-auto">
+    <div className="w-[300px] h-[300px] sm:w-[340px] sm:h-[340px] bg-white border-[4px] border-[#b8b8b8] rounded-[5px] shadow-none select-none overflow-visible mx-auto relative">
       <div
         className="grid w-full h-full"
         style={{
@@ -491,6 +493,38 @@ export function MemoryMazeGrid({
       >
         {rows.flat()}
       </div>
+
+      {/* Tutorial Animated Pointer Arrow Cursor */}
+      {pointerPosition && (
+        <div
+          className="absolute z-20 pointer-events-none transition-all duration-300 ease-out flex items-center justify-center"
+          style={{
+            left: `${((pointerPosition.col + 0.5) / gridSize) * 100}%`,
+            top: `${((pointerPosition.row + 0.5) / gridSize) * 100}%`,
+            transform: "translate(-15%, -15%)",
+          }}
+        >
+          {/* Subtle click wave ripple */}
+          <span className="absolute -top-1.5 -left-1.5 w-4 h-4 rounded-full bg-black/20 animate-ping" />
+          <span className="absolute -top-1 -left-1 w-3 h-3 rounded-full bg-black/30" />
+
+          {/* High-visibility crisp pointer arrow */}
+          <svg
+            viewBox="0 0 24 24"
+            className="w-8 h-8 sm:w-9 sm:h-9 drop-shadow-[0_3px_6px_rgba(0,0,0,0.45)]"
+            aria-label="Cursor pointer"
+          >
+            <path
+              d="M3 2 L3 19 L7.5 15.5 L11 23 L14 21.5 L10.5 14.5 L17 14.5 Z"
+              fill="#000000"
+              stroke="#ffffff"
+              strokeWidth="2"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+          </svg>
+        </div>
+      )}
     </div>
   );
 }

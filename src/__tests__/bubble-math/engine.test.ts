@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { bubbleMathDefinition } from '@/lib/games/bubble-math/engine';
 import { PracticeConfig, GameAction } from '@/lib/games/core/types';
 import { BubbleMathActionPayload } from '@/lib/games/bubble-math/types';
+import { SessionController } from '@/lib/games/core/session';
 
 describe('Bubble Math Engine Definition', () => {
   const dummyConfig: PracticeConfig = {
@@ -224,5 +225,42 @@ describe('Bubble Math Engine Definition', () => {
     expect(state1.questions[17].expressions[0].display).toBe("18 + (3 + 2)");
     expect(state1.questions[18].expressions[1].display).toBe("3³");
     expect(state1.questions[19].expressions[2].display).toBe("24 + (10 + 13)");
+  });
+
+  it('guarantees Full Mock Test with 28 questions progresses sequentially on timeouts and only completes on Question 28', () => {
+    const mockConfig: PracticeConfig = {
+      ...dummyConfig,
+      variantId: 'full-mock-test',
+      itemCount: 28,
+      timeLimitSeconds: 15,
+    };
+
+    const controller = new SessionController('test-mock-sess', mockConfig, bubbleMathDefinition, 'seed-timeout-test');
+    controller.transitionTo('READY');
+    controller.transitionTo('PLAYING');
+
+    // Simulate timeouts for Question 1 to Question 27 (indices 0 to 26)
+    for (let i = 0; i < 27; i++) {
+      expect(controller.getSession().currentItemIndex).toBe(i);
+      expect(controller.getSession().status).toBe('PLAYING');
+
+      // Record timeout action for question i
+      controller.recordAction({ selectedOrderIds: [], isTimeout: true }, 15000);
+      expect(controller.getSession().status).toBe('PLAYING');
+
+      // Advance to next question
+      controller.advanceItem();
+      expect(controller.getSession().currentItemIndex).toBe(i + 1);
+    }
+
+    // Now on Question 28 (index 27)
+    expect(controller.getSession().currentItemIndex).toBe(27);
+    expect(controller.getSession().status).toBe('PLAYING');
+
+    // Timeout on Question 28 -> should complete session
+    controller.recordAction({ selectedOrderIds: [], isTimeout: true }, 15000);
+    expect(controller.getSession().status).toBe('COMPLETED');
+    expect(controller.getSession().actions).toHaveLength(28);
+    expect(controller.getSession().actions.every((a: any) => a.payload.isTimeout)).toBe(true);
   });
 });

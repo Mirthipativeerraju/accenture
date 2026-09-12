@@ -126,6 +126,7 @@ export function MemoryMazeTutorial({ onStart }: MemoryMazeTutorialProps) {
     let isDoorOpen = false;
     let doorPhase: "entering" | "opened" | null = null;
     let collisionDirection: Direction | null = null;
+    let pointerPosition: Position | null = null;
 
     if (currentSlide === 0) {
       // Slide 1 (State 1: Basic Movement)
@@ -139,8 +140,19 @@ export function MemoryMazeTutorial({ onStart }: MemoryMazeTutorialProps) {
         { row: 1, col: 0 }, // Step 5: UP (re-entering visited cell)
         { row: 1, col: 1 }, // Step 6: RIGHT (re-entering visited cell)
       ];
+      const targets: Position[] = [
+        { row: 1, col: 0 }, // Step 0 target: UP to (1,0)
+        { row: 1, col: 1 }, // Step 1 target: RIGHT to (1,1)
+        { row: 2, col: 1 }, // Step 2 target: DOWN to (2,1)
+        { row: 2, col: 0 }, // Step 3 target: LEFT to (2,0)
+        { row: 1, col: 0 }, // Step 4 target: UP to (1,0)
+        { row: 1, col: 1 }, // Step 5 target: RIGHT to (1,1)
+        { row: 2, col: 1 }, // Step 6 target: DOWN to (2,1)
+      ];
       const idx = demoStep % path.length;
       player = path[idx];
+      pointerPosition = targets[idx];
+
       // Visited cells accumulated
       const uniqueVisited: Position[] = [];
       for (let i = 0; i <= idx; i++) {
@@ -157,30 +169,36 @@ export function MemoryMazeTutorial({ onStart }: MemoryMazeTutorialProps) {
       key = TUTORIAL_KEY;
       keyCollected = false;
       if (demoStep === 0) {
-        // Step 0: START position (2,0)
+        // Step 0: START position (2,0), selecting (1,0) [UP]
         player = { row: 2, col: 0 };
+        pointerPosition = { row: 1, col: 0 };
         visited = [{ row: 2, col: 0 }];
       } else if (demoStep === 1) {
-        // Step 1: Move UP to (1,0)
+        // Step 1: Move UP to (1,0), selecting (1,1) [RIGHT]
         player = { row: 1, col: 0 };
+        pointerPosition = { row: 1, col: 1 };
         visited = [{ row: 2, col: 0 }, { row: 1, col: 0 }];
       } else if (demoStep === 2) {
-        // Step 2: Move RIGHT to (1,1) - multiple cells visited
+        // Step 2: Move RIGHT to (1,1), selecting (2,1) [DOWN - attempting blocked move]
         player = { row: 1, col: 1 };
+        pointerPosition = { row: 2, col: 1 };
         visited = [{ row: 2, col: 0 }, { row: 1, col: 0 }, { row: 1, col: 1 }];
       } else if (demoStep === 3) {
         // Step 3: Attempt blocked downward move across invisible wall between (1,1) and (2,1)
         player = { row: 1, col: 1 };
+        pointerPosition = { row: 2, col: 1 };
         visited = [{ row: 2, col: 0 }, { row: 1, col: 0 }, { row: 1, col: 1 }];
         collisionDirection = "down"; // Temporary RED COLLISION LINE appears on bottom boundary
       } else if (demoStep === 4) {
         // Step 4: Reset immediately to ORIGINAL START (2,0), wall remains invisible, path reset
         player = { row: 2, col: 0 };
+        pointerPosition = { row: 1, col: 0 };
         visited = [{ row: 2, col: 0 }];
         collisionDirection = null;
       } else {
         // Step 5: Pause at START to reinforce reset behavior
         player = { row: 2, col: 0 };
+        pointerPosition = { row: 1, col: 0 };
         visited = [{ row: 2, col: 0 }];
         collisionDirection = null;
       }
@@ -196,8 +214,19 @@ export function MemoryMazeTutorial({ onStart }: MemoryMazeTutorialProps) {
         { row: 2, col: 2 }, // Step 6: DOWN -> reaches DOOR
         { row: 2, col: 2 }, // Step 7: DOOR OPENS
       ];
+      const targets: (Position | null)[] = [
+        { row: 1, col: 0 }, // Step 0: selecting (1,0) [UP]
+        { row: 0, col: 0 }, // Step 1: selecting (0,0) [UP]
+        { row: 0, col: 1 }, // Step 2: selecting (0,1) [RIGHT - Key]
+        { row: 0, col: 2 }, // Step 3: selecting (0,2) [RIGHT]
+        { row: 1, col: 2 }, // Step 4: selecting (1,2) [DOWN]
+        { row: 2, col: 2 }, // Step 5: selecting (2,2) [DOWN - Door]
+        null,               // Step 6: reached door
+        null,               // Step 7: door opened
+      ];
       const idx = demoStep % path.length;
       player = path[idx];
+      pointerPosition = targets[idx];
 
       const uniqueVisited: Position[] = [];
       for (let i = 0; i <= idx; i++) {
@@ -219,6 +248,7 @@ export function MemoryMazeTutorial({ onStart }: MemoryMazeTutorialProps) {
       isDoorOpen = false;
       keyCollected = false;
       visited = [{ row: 2, col: 0 }];
+      pointerPosition = null;
     } else {
       // Slide 5 (State 5: Ready for Full Mock Test)
       player = { row: 2, col: 0 };
@@ -227,12 +257,13 @@ export function MemoryMazeTutorial({ onStart }: MemoryMazeTutorialProps) {
       isDoorOpen = false;
       keyCollected = false;
       visited = [{ row: 2, col: 0 }];
+      pointerPosition = null;
     }
 
-    return { player, key, door, visited, keyCollected, isDoorOpen, doorPhase, collisionDirection };
+    return { player, key, door, visited, keyCollected, isDoorOpen, doorPhase, collisionDirection, pointerPosition };
   };
 
-  const { player, key, door, visited, keyCollected, isDoorOpen, doorPhase, collisionDirection } =
+  const { player, key, door, visited, keyCollected, isDoorOpen, doorPhase, collisionDirection, pointerPosition } =
     getDemoGridState();
 
   const formatTimer = (seconds: number) => {
@@ -301,6 +332,7 @@ export function MemoryMazeTutorial({ onStart }: MemoryMazeTutorialProps) {
                 disabled={true}
                 showArrows={true}
                 gridSize={3}
+                pointerPosition={pointerPosition}
               />
             </div>
 

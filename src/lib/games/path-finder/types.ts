@@ -1,53 +1,71 @@
-import { PracticeConfig } from "../core/types";
+export const GRID_SIZE = 9;
+export const BLOCK_SIZE = 3;
+export const CELL_SIZE = 42;
+export const INITIAL_TIME = 240;
 
-export type ArrowDirection = "UP" | "DOWN" | "LEFT" | "RIGHT" | "UP_RIGHT" | "DOWN_RIGHT" | "DOWN_LEFT" | "UP_LEFT";
+export type ArrowDirection =
+  | "RIGHT"
+  | "DOWN_RIGHT"
+  | "DOWN"
+  | "DOWN_LEFT"
+  | "LEFT"
+  | "UP_LEFT"
+  | "UP"
+  | "UP_RIGHT";
 
-export interface PathCell {
-  r: number; // Row relative to block (0 to blockSize - 1)
-  c: number; // Col relative to block (0 to blockSize - 1)
-  active: boolean; // True if this is a path cell (gray with arrow)
-  direction?: ArrowDirection; // Arrow direction
+export interface RouteCell {
+  active: boolean;
+  arrowDirection?: ArrowDirection;
+  connections?: {
+    up: boolean;
+    right: boolean;
+    down: boolean;
+    left: boolean;
+  };
 }
 
-export interface GridBlock {
-  blockRow: number; // Block row coordinate (0 to blockGridSize - 1)
-  blockCol: number; // Block col coordinate (0 to blockGridSize - 1)
-  size: number; // Cells per block dimension (e.g. 3)
-  cells: PathCell[][]; // 2D array [r][c] of cells
-  rotation: number; // Current rotation in degrees: 0, 90, 180, 270
-}
+export type CellData = RouteCell;
 
-export interface Endpoint {
-  side: "TOP" | "BOTTOM" | "LEFT" | "RIGHT";
-  index: number; // Global row or column index on the outer border
-  type: "START" | "DESTINATION";
-}
+export type TileType = "STRAIGHT" | "CORNER" | "T_JUNCTION" | "CROSS";
 
-export interface PathFinderQuestion {
+export type TilePort = "TOP" | "RIGHT" | "BOTTOM" | "LEFT";
+
+export interface TileDefinition {
   id: string;
-  blockGridSize: number; // Number of blocks per row/col (e.g. 3 for 3x3 blocks = 9x9 grid)
-  blockSize: number; // Size of each block in cells (e.g. 3 for 3x3 cells per block)
-  totalGridSize: number; // blockGridSize * blockSize (e.g. 9)
-  blocks: GridBlock[][]; // [blockRow][blockCol]
-  start: Endpoint;
-  destination: Endpoint;
-  initialRotations: number[][]; // [blockRow][blockCol] initial rotation
-  solutionRotations: number[][]; // [blockRow][blockCol] solved rotation
+  gridRow: number; // 0, 1, 2 for 3x3 tile grid
+  gridCol: number; // 0, 1, 2
+  type?: TileType;
+  cells: RouteCell[][]; // 3x3 array of cells
 }
 
-export interface PathFinderState {
-  questions: PathFinderQuestion[];
-  currentQuestionIndex: number;
+export interface TileState {
+  rotation: 0 | 1 | 2 | 3; // 0=0°, 1=90°, 2=180°, 3=270°
+  flipped?: boolean;
+  directionReversed?: boolean;
+  mode?: 0 | 1 | 2 | 3;
 }
 
-export interface PathFinderConfig extends PracticeConfig {
-  blockGridSize?: number;
-  blockSize?: number;
+export interface MoveOperation {
+  tileId: string;
+  operation: "ROTATE" | "FLIP";
 }
 
-export interface PathFinderActionPayload {
-  rotations: number[][]; // User's current block rotations [blockRow][blockCol]
-  direction: "FORWARD" | "REVERSE";
-  isTimeout: boolean;
-  moves?: number;
+export interface PuzzleDefinition {
+  id: string;
+  gridRows: number; // 9
+  gridCols: number; // 9
+  tileRows: number; // 3
+  tileCols: number; // 3
+  tileSize: number; // 3
+  startPos: { row: number; col: number; entrySide: "LEFT" | "TOP" | "RIGHT" | "BOTTOM" };
+  destinationPos: { row: number; col: number; exitSide: "LEFT" | "TOP" | "RIGHT" | "BOTTOM" };
+  tiles: TileDefinition[];
+  initialTileStates: Record<string, TileState>;
+  solution?: {
+    minMoves: number;
+    tileStates: Record<string, TileState>;
+    solutionMoves?: MoveOperation[];
+    solutionPath?: { r: number; c: number }[];
+  };
 }
+

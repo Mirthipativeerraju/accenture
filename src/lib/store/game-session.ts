@@ -35,9 +35,9 @@ export const useGameSessionStore = create<GameSessionState>((set, get) => ({
       if (onTimerComplete) {
         onTimerComplete();
       } else {
-        // Default on timeout
+        // Default on timeout (for games with whole-session timers, not per-question games like bubble-math)
         const state = get();
-        if (state.controller) {
+        if (state.controller && config.gameId !== "bubble-math") {
           state.controller.transitionTo("TIMEOUT");
           set({ currentSession: state.controller.getSession(), remainingSeconds: 0 });
         }
@@ -97,10 +97,11 @@ export const useGameSessionStore = create<GameSessionState>((set, get) => ({
   },
 
   advanceQuestion: () => {
-    const { controller } = get();
+    const { controller, timer } = get();
     if (controller) {
       controller.advanceItem();
-      set({ currentSession: controller.getSession() });
+      const remainingSeconds = timer ? timer.getRemainingSeconds() : 0;
+      set({ currentSession: controller.getSession(), remainingSeconds });
     }
   },
 

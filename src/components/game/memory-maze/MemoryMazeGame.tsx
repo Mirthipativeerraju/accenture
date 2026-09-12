@@ -717,18 +717,9 @@ export function MemoryMazeGame() {
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full max-w-[400px] mt-2">
-              <button
-                onClick={() => {
-                  setAttemptHistory([]);
-                  setActiveQuestionIndex(0);
-                  setFullMockStage("intro");
-                }}
-                className="w-full sm:w-auto h-10 px-8 bg-black hover:bg-neutral-800 active:scale-[0.99] text-white font-bold text-xs sm:text-sm tracking-wider uppercase rounded-[4px] shadow-sm transition-all cursor-pointer text-center"
-              >
-                Play Again
-              </button>
+              
               <a
-                href="/practice"
+                href="/practice/memory-maze"
                 className="w-full sm:w-auto h-10 px-7 flex items-center justify-center bg-white border border-[#b8b8b8] hover:bg-neutral-100 active:scale-[0.99] text-black font-bold text-xs sm:text-sm tracking-wider uppercase rounded-[4px] shadow-sm transition-all cursor-pointer text-center"
               >
                 Back to Practice

@@ -39,12 +39,30 @@ export function BubbleMathGame() {
     return null;
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasConfirmedSubmission, setHasConfirmedSubmission] = useState(false);
   const [feedbackState, setFeedbackState] = useState<
     "correct" | "incorrect" | null
   >(null);
 
   const submitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const questionStartTime = useRef<number>(0);
+  const lastHandledItemIndexRef = useRef<number>(-1);
+  const isAdvancingRef = useRef<boolean>(false);
+
+  const isPracticeVariant = currentSession?.variantId?.startsWith("practice-");
+  const isFullChallenge = currentSession?.variantId === "full-challenge";
+  const isFullMockTest = currentSession?.variantId === "full-mock-test";
+  const isFullBubbleMockTest = currentSession?.variantId === "full-bubble-mock-test";
+  const state = currentSession?.gameState as BubbleMathState | undefined;
+
+  // Reset question-specific transition flags whenever currentItemIndex changes
+  useEffect(() => {
+    isAdvancingRef.current = false;
+    setIsSubmitting(false);
+    setSelectedIds([]);
+    setFeedbackState(null);
+    questionStartTime.current = Date.now();
+  }, [currentSession?.currentItemIndex]);
 
   // Restore saved result on variant change if idle
   useEffect(() => {
@@ -66,6 +84,7 @@ export function BubbleMathGame() {
 
       if (submitTimeoutRef.current) {
         clearTimeout(submitTimeoutRef.current);
+        submitTimeoutRef.current = null;
       }
     };
   }, [timer]);
@@ -75,12 +94,17 @@ export function BubbleMathGame() {
   // ───────────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
+    const currentIdx = currentSession?.currentItemIndex ?? 0;
     if (
       currentSession?.status === "PLAYING" &&
       remainingSeconds <= 0 &&
-      !isSubmitting
+      !isSubmitting &&
+      !isAdvancingRef.current &&
+      lastHandledItemIndexRef.current !== currentIdx
     ) {
       if (selectedIds.length < 3) {
+        lastHandledItemIndexRef.current = currentIdx;
+        isAdvancingRef.current = true;
         setIsSubmitting(true);
         timer?.stop();
 
@@ -95,19 +119,27 @@ export function BubbleMathGame() {
           responseTimeMs
         );
 
-        const isLastQuestion = (currentSession?.currentItemIndex ?? 0) >= (currentSession?.totalItems || 10) - 1;
+        const isChallengeOrMock = isFullChallenge || isFullMockTest || isFullBubbleMockTest;
+        const totalItemsCount = currentSession?.totalItems ?? (state?.questions?.length || 28);
+        const isLastQuestion = currentIdx >= totalItemsCount - 1;
+
+        if (submitTimeoutRef.current) {
+          clearTimeout(submitTimeoutRef.current);
+        }
 
         submitTimeoutRef.current = setTimeout(() => {
+          submitTimeoutRef.current = null;
           setSelectedIds([]);
           setIsSubmitting(false);
 
           if (!isLastQuestion) {
-            advanceQuestion();
-            questionStartTime.current = Date.now();
             timer?.reset();
             timer?.start();
+            advanceQuestion();
+          } else {
+            isAdvancingRef.current = false;
           }
-        }, 800);
+        }, isChallengeOrMock ? 450 : 800);
       }
     }
   }, [
@@ -115,11 +147,15 @@ export function BubbleMathGame() {
     currentSession?.status,
     currentSession?.currentItemIndex,
     currentSession?.totalItems,
+    state?.questions?.length,
     selectedIds,
     recordAction,
     advanceQuestion,
     timer,
     isSubmitting,
+    isFullChallenge,
+    isFullMockTest,
+    isFullBubbleMockTest,
   ]);
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -159,16 +195,9 @@ export function BubbleMathGame() {
   // Guards
   // ───────────────────────────────────────────────────────────────────────────
 
-  if (!currentSession || !controller) {
+  if (!currentSession || !controller || !state) {
     return <div>Initializing...</div>;
   }
-
-  const isPracticeVariant = currentSession.variantId?.startsWith("practice-");
-  const isFullChallenge = currentSession.variantId === "full-challenge";
-  const isFullMockTest = currentSession.variantId === "full-mock-test";
-  const isFullBubbleMockTest = currentSession.variantId === "full-bubble-mock-test";
-
-  const state = currentSession.gameState as BubbleMathState;
 
   const currentQ: BubbleMathQuestion | undefined =
     state.questions[currentSession.currentItemIndex];
@@ -182,6 +211,45 @@ export function BubbleMathGame() {
       currentSession.status
     ) || (isPracticeVariant && result)
   ) {
+    if ((isFullMockTest || isFullBubbleMockTest) && !hasConfirmedSubmission) {
+      const headerTitle = isFullBubbleMockTest
+        ? "Bubble Math - Full Bubble Mock Test"
+        : "Bubble Math - Full Mock Test";
+
+      return (
+        <div className="w-full min-h-[520px] flex flex-col items-center justify-center py-6 px-4 bg-white text-black select-none">
+          <div className="w-full max-w-[650px] min-h-[580px] flex flex-col border border-[#b8b8b8] rounded-[6px] overflow-hidden bg-[#f3f3f3] shadow-none relative">
+            <div className="w-full h-[48px] bg-black flex items-center justify-between px-5 shrink-0 z-10">
+              <span className="text-white text-sm sm:text-base font-semibold tracking-tight">
+                {headerTitle}
+              </span>
+            </div>
+
+            <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 space-y-8">
+              <div className="flex flex-col items-center justify-center space-y-4 text-center max-w-[500px]">
+                <h2 className="text-xl sm:text-2xl font-bold text-black tracking-tight">
+                  Your response has been saved.
+                </h2>
+                <p className="text-sm sm:text-base text-neutral-700 font-normal">
+                  To submit your results, click the CONTINUE button below.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-center w-full max-w-[300px]">
+                <button
+                  type="button"
+                  onClick={() => setHasConfirmedSubmission(true)}
+                  className="w-full h-11 px-8 bg-black hover:bg-neutral-800 active:scale-[0.99] text-white font-bold text-sm tracking-wider uppercase rounded-[4px] shadow-sm transition-all cursor-pointer text-center"
+                >
+                  CONTINUE
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     if (result) {
       return (
         <BubbleMathResult
@@ -191,6 +259,7 @@ export function BubbleMathGame() {
               persistence.clearLatestResult(currentSession.variantId);
             }
             setResult(null);
+            setHasConfirmedSubmission(false);
             window.location.reload();
           }}
         />
@@ -226,7 +295,8 @@ export function BubbleMathGame() {
   // ───────────────────────────────────────────────────────────────────────────
 
   const handleBubbleClick = (id: string) => {
-    if (isSubmitting) return;
+    const currentIdx = currentSession?.currentItemIndex ?? 0;
+    if (isSubmitting || isAdvancingRef.current || lastHandledItemIndexRef.current === currentIdx) return;
 
     // Allow deselecting an already-selected bubble
     if (selectedIds.includes(id)) {
@@ -242,6 +312,8 @@ export function BubbleMathGame() {
 
     // Submit after all 3 bubbles are selected
     if (newSelections.length === 3) {
+      lastHandledItemIndexRef.current = currentIdx;
+      isAdvancingRef.current = true;
       setIsSubmitting(true);
       timer?.stop();
 
@@ -264,18 +336,25 @@ export function BubbleMathGame() {
         );
       }
 
-      const isLastQuestion = (currentSession?.currentItemIndex ?? 0) >= (currentSession?.totalItems || 10) - 1;
+      const totalItemsCount = currentSession?.totalItems ?? (state?.questions?.length || 28);
+      const isLastQuestion = currentIdx >= totalItemsCount - 1;
+
+      if (submitTimeoutRef.current) {
+        clearTimeout(submitTimeoutRef.current);
+      }
 
       submitTimeoutRef.current = setTimeout(() => {
+        submitTimeoutRef.current = null;
         setSelectedIds([]);
         setIsSubmitting(false);
         setFeedbackState(null);
 
         if (!isLastQuestion) {
-          advanceQuestion();
-          questionStartTime.current = Date.now();
           timer?.reset();
           timer?.start();
+          advanceQuestion();
+        } else {
+          isAdvancingRef.current = false;
         }
       }, isChallengeOrMock ? 450 : 1000);
     }
@@ -696,7 +775,8 @@ function FullChallengeUI({
         <div className="w-full bg-neutral-900 text-white px-5 py-3 rounded-t-lg flex items-center justify-between shadow-md select-none border-b border-neutral-800">
           <div className="flex items-center gap-2">
             <span className="font-semibold text-sm sm:text-base text-neutral-100 tracking-wide">
-              Question {currentItemNum} of {totalQuestions}
+              Question {currentItemNum} of {
+              totalQuestions}
             </span>
           </div>
 
@@ -854,7 +934,8 @@ function FullBubbleMockTestUI({
 
   const [phase, setPhase] = useState<"start" | "intro" | "practice" | "practice-completed" | "playing">("start");
   const [tutorialStep, setTutorialStep] = useState(1);
-  const [demoSelected, setDemoSelected] = useState(false);
+  const [demoAnimStep, setDemoAnimStep] = useState(0);
+  const [demoIsClicking, setDemoIsClicking] = useState(false);
 
   // Practice state
   const [practiceIndex, setPracticeIndex] = useState(0);
@@ -896,13 +977,70 @@ function FullBubbleMockTestUI({
     };
   }, [currentSession.currentItemIndex, phase, practiceIndex]);
 
-  // Demo selection toggle for instruction 3
+  // Tutorial demo animation loop
   useEffect(() => {
-    if (phase === "intro" && tutorialStep === 3) {
-      const interval = setInterval(() => setDemoSelected((prev) => !prev), 1000);
+    if (phase === "intro" && (tutorialStep === 2 || tutorialStep === 3)) {
+      setDemoAnimStep(0);
+      const intervalMs = tutorialStep === 3 ? 1100 : 1300;
+      const interval = setInterval(() => {
+        setDemoIsClicking(true);
+        setTimeout(() => setDemoIsClicking(false), 350);
+        setDemoAnimStep((prev) => prev + 1);
+      }, intervalMs);
       return () => clearInterval(interval);
     }
   }, [phase, tutorialStep]);
+
+  // Derive active selection and cursor position for tutorial animation
+  let demoSelectedIndices: number[] = [];
+  let demoCursorPos: { left: string; top: string } | null = null;
+
+  if (phase === "intro") {
+    if (tutorialStep === 1) {
+      // Step 1: No cursor arrow - kept exactly as original
+      demoCursorPos = null;
+      demoSelectedIndices = [];
+    } else if (tutorialStep === 2) {
+      // Step 2: Move cursor to Bubble 0, click, and show it selected / highlighted
+      const s = demoAnimStep % 3;
+      demoCursorPos = { left: "50%", top: "27%" };
+      if (s >= 1) {
+        demoSelectedIndices = [0];
+      }
+    } else if (tutorialStep === 3) {
+      // Step 3: Exact sequence: UNSELECTED -> SELECT Bubble 1 -> SELECT Bubble 2 -> DESELECT Bubble 1
+      const s = demoAnimStep % 7;
+      if (s === 0) {
+        // 1. All unselected. Arrow moves to First Bubble (0) -> Clicks
+        demoCursorPos = { left: "50%", top: "27%" };
+        demoSelectedIndices = [];
+      } else if (s === 1) {
+        // 2. First Bubble (0) is now SELECTED
+        demoCursorPos = { left: "50%", top: "27%" };
+        demoSelectedIndices = [0];
+      } else if (s === 2) {
+        // 3. Arrow moves to Second Bubble (1) while 1 is UNSELECTED -> Clicks
+        demoCursorPos = { left: "25%", top: "63%" };
+        demoSelectedIndices = [0];
+      } else if (s === 3) {
+        // 4. Second Bubble (1) is now SELECTED ([0, 1])
+        demoCursorPos = { left: "25%", top: "63%" };
+        demoSelectedIndices = [0, 1];
+      } else if (s === 4) {
+        // 5. Arrow moves BACK to First Bubble (0) while still [0, 1] -> Clicks
+        demoCursorPos = { left: "50%", top: "27%" };
+        demoSelectedIndices = [0, 1];
+      } else if (s === 5) {
+        // 6. First Bubble (0) is now DESELECTED (only [1] selected)
+        demoCursorPos = { left: "50%", top: "27%" };
+        demoSelectedIndices = [1];
+      } else if (s === 6) {
+        // 7. Hold state showing First Bubble deselected before restarting loop
+        demoCursorPos = { left: "50%", top: "27%" };
+        demoSelectedIndices = [1];
+      }
+    }
+  }
 
   // Practice question advance handler
   const advancePractice = useCallback(() => {
@@ -1083,7 +1221,7 @@ function FullBubbleMockTestUI({
               {phase === "practice"
                 ? `Question ${practiceIndex + 1} of 2`
                 : phase === "playing"
-                ? `Question ${currentItemNum} of ${totalQuestions}`
+                ? `Question ${currentItemNum} of ${currentItemNum}`
                 : ""}
             </span>
           </div>
@@ -1236,9 +1374,45 @@ function FullBubbleMockTestUI({
 
               {/* Bubble Play Area Canvas with Upward Exit Animation */}
               <div className="relative w-full h-[460px] sm:h-[500px] my-1 select-none overflow-hidden">
+                {/* Tutorial Animated Arrow Cursor */}
+                {phase === "intro" && demoCursorPos && (
+                  <div
+                    className="absolute z-[70] pointer-events-none transition-all duration-400 ease-out flex items-center justify-center"
+                    style={{
+                      left: demoCursorPos.left,
+                      top: demoCursorPos.top,
+                      transform: "translate(-15%, -15%)",
+                    }}
+                  >
+                    {/* Click / Action Ping Ripple */}
+                    {demoIsClicking && (
+                      <>
+                        <span className="absolute -top-2 -left-2 w-6 h-6 rounded-full bg-black/20 animate-ping" />
+                        <span className="absolute -top-1 -left-1 w-4 h-4 rounded-full bg-black/35" />
+                      </>
+                    )}
+
+                    {/* High-visibility crisp pointer arrow */}
+                    <svg
+                      viewBox="0 0 24 24"
+                      className="w-9 h-9 sm:w-10 sm:h-10 drop-shadow-[0_3px_8px_rgba(0,0,0,0.5)]"
+                      aria-label="Cursor pointer"
+                    >
+                      <path
+                        d="M3 2 L3 19 L7.5 15.5 L11 23 L14 21.5 L10.5 14.5 L17 14.5 Z"
+                        fill="#000000"
+                        stroke="#ffffff"
+                        strokeWidth="2"
+                        strokeLinejoin="round"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  </div>
+                )}
+
                 {activeQ.displayOrderIds.map((id, index) => {
                   const expr = activeQ.expressions.find((e) => e.id === id)!;
-                  const isSelected = activeSelectedIds.includes(id) || (phase === "intro" && tutorialStep === 2 && index === 0) || (phase === "intro" && tutorialStep === 3 && index === 0 && demoSelected);
+                  const isSelected = activeSelectedIds.includes(id) || (phase === "intro" && demoSelectedIndices.includes(index));
                   const isRevealed = index < revealedCount;
 
                   let animationClass = "translate-y-6 opacity-0 pointer-events-none";
@@ -1355,6 +1529,8 @@ function FullMockTestUI({
   const [revealedCount, setRevealedCount] = useState(0);
   const [tutorialStep, setTutorialStep] = useState<1 | 2 | 3 | 4 | 5 | 6 | "playing">(1);
   const [hasSeenStep6, setHasSeenStep6] = useState(false);
+  const [demoAnimStep, setDemoAnimStep] = useState(0);
+  const [demoIsClicking, setDemoIsClicking] = useState(false);
 
   // Trigger Step 6 after first two questions are completed
   useEffect(() => {
@@ -1378,6 +1554,71 @@ function FullMockTestUI({
       clearTimeout(timer3);
     };
   }, [currentSession.currentItemIndex]);
+
+  // Tutorial demo animation loop
+  useEffect(() => {
+    if (tutorialStep === 2 || tutorialStep === 3) {
+      setDemoAnimStep(0);
+      const intervalMs = tutorialStep === 3 ? 1100 : 1100;
+      const interval = setInterval(() => {
+        setDemoIsClicking(true);
+        setTimeout(() => setDemoIsClicking(false), 320);
+        setDemoAnimStep((prev) => prev + 1);
+      }, intervalMs);
+      return () => clearInterval(interval);
+    }
+  }, [tutorialStep]);
+
+  // Derive active selection and cursor position for tutorial animation
+  let demoSelectedIndices: number[] = [];
+  let demoCursorPos: { left: string; top: string } | null = null;
+
+  if (tutorialStep !== "playing") {
+    if (tutorialStep === 1) {
+      // Step 1: No cursor arrow - kept exactly as original
+      demoCursorPos = null;
+      demoSelectedIndices = [];
+    } else if (tutorialStep === 2) {
+      // Step 2: Move cursor to Bubble 0, click, and show it selected / highlighted
+      const s = demoAnimStep % 3;
+      demoCursorPos = { left: "50%", top: "27%" };
+      if (s >= 1) {
+        demoSelectedIndices = [0];
+      }
+    } else if (tutorialStep === 3) {
+      // Step 3: Exact sequence: UNSELECTED -> SELECT Bubble 1 -> SELECT Bubble 2 -> DESELECT Bubble 1
+      const s = demoAnimStep % 7;
+      if (s === 0) {
+        // 1. All unselected. Arrow moves to First Bubble (0) -> Clicks
+        demoCursorPos = { left: "50%", top: "27%" };
+        demoSelectedIndices = [];
+      } else if (s === 1) {
+        // 2. First Bubble (0) is now SELECTED
+        demoCursorPos = { left: "50%", top: "27%" };
+        demoSelectedIndices = [0];
+      } else if (s === 2) {
+        // 3. Arrow moves to Second Bubble (1) while 1 is UNSELECTED -> Clicks
+        demoCursorPos = { left: "25%", top: "63%" };
+        demoSelectedIndices = [0];
+      } else if (s === 3) {
+        // 4. Second Bubble (1) is now SELECTED ([0, 1])
+        demoCursorPos = { left: "25%", top: "63%" };
+        demoSelectedIndices = [0, 1];
+      } else if (s === 4) {
+        // 5. Arrow moves BACK to First Bubble (0) while still [0, 1] -> Clicks
+        demoCursorPos = { left: "50%", top: "27%" };
+        demoSelectedIndices = [0, 1];
+      } else if (s === 5) {
+        // 6. First Bubble (0) is now DESELECTED (only [1] selected)
+        demoCursorPos = { left: "50%", top: "27%" };
+        demoSelectedIndices = [1];
+      } else if (s === 6) {
+        // 7. Hold state showing First Bubble deselected before restarting loop
+        demoCursorPos = { left: "50%", top: "27%" };
+        demoSelectedIndices = [1];
+      }
+    }
+  }
 
   // Constrained layout patterns designed specifically for the max-w-[540px] play area
   const patternA = [
@@ -1408,6 +1649,15 @@ function FullMockTestUI({
   if (currentQ.layoutPattern === "B") positions = patternB;
   else if (currentQ.layoutPattern === "C") positions = patternC;
   else if (currentQ.layoutPattern === "D") positions = patternD;
+
+  if (tutorialStep !== "playing") {
+    positions = [
+      "top-[19%] sm:top-[21%] left-[50%] -translate-x-1/2",
+      "top-[55%] sm:top-[55%] left-[25%] -translate-x-1/2",
+      "top-[55%] sm:top-[55%] left-[75%] -translate-x-1/2",
+      "top-[75%] left-[50%] -translate-x-1/2",
+    ];
+  }
 
   const totalQuestions = currentSession.totalItems || 28;
   const currentItemNum = currentSession.currentItemIndex + 1;
@@ -1568,12 +1818,46 @@ function FullMockTestUI({
           <div className={`relative w-full h-[460px] sm:h-[500px] my-1 select-none overflow-hidden ${
             (tutorialStep === 1 || tutorialStep === 2 || tutorialStep === 3) ? "z-[105] bg-slate-100 rounded-lg shadow-lg" : ""
           }`}>
+            {/* Tutorial Animated Arrow Cursor */}
+            {tutorialStep !== "playing" && demoCursorPos && (
+              <div
+                className="absolute z-[70] pointer-events-none transition-all duration-400 ease-out flex items-center justify-center"
+                style={{
+                  left: demoCursorPos.left,
+                  top: demoCursorPos.top,
+                  transform: "translate(-15%, -15%)",
+                }}
+              >
+                {/* Click / Action Ping Ripple */}
+                {demoIsClicking && (
+                  <>
+                    <span className="absolute -top-2 -left-2 w-6 h-6 rounded-full bg-black/20 animate-ping" />
+                    <span className="absolute -top-1 -left-1 w-4 h-4 rounded-full bg-black/35" />
+                  </>
+                )}
+
+                {/* High-visibility crisp pointer arrow */}
+                <svg
+                  viewBox="0 0 24 24"
+                  className="w-9 h-9 sm:w-10 sm:h-10 drop-shadow-[0_3px_8px_rgba(0,0,0,0.5)]"
+                  aria-label="Cursor pointer"
+                >
+                  <path
+                    d="M3 2 L3 19 L7.5 15.5 L11 23 L14 21.5 L10.5 14.5 L17 14.5 Z"
+                    fill="#000000"
+                    stroke="#ffffff"
+                    strokeWidth="2"
+                    strokeLinejoin="round"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </div>
+            )}
 
             {currentQ.displayOrderIds.map((id, index) => {
               const expr = currentQ.expressions.find((e) => e.id === id)!;
               const isSelected = selectedIds.includes(id) 
-                || (tutorialStep === 2 && index === 0)
-                || (tutorialStep === 3 && (index === 0 || index === 1));
+                || (tutorialStep !== "playing" && demoSelectedIndices.includes(index));
               
               const isRevealed = index < revealedCount;
 

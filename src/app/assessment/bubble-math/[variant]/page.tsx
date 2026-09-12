@@ -47,7 +47,9 @@ export default function BubbleMathVariantAssessmentPage() {
         allowRestart: false,
         allowBacktrack: false
       };
-      initializeSession(`sess-${Date.now()}`, config, `seed-${Date.now()}`);
+      initializeSession(`sess-${Date.now()}`, config, `seed-${Date.now()}`, () => {
+        // No-op: Game component handles per-question timeout
+      });
     }
   }, [currentSession, variantId, initializeSession]);
 
