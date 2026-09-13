@@ -6,15 +6,7 @@ import { PathFinderGame } from "@/components/game/path-finder/PathFinderGame";
 
 export default function PathFinderVariantAssessmentPage() {
   const params = useParams();
-  const rawVariant = typeof params?.variant === "string" ? params.variant : "";
+  const rawVariant = typeof params?.variant === "string" ? params.variant : "practice-1";
 
-  if (rawVariant === "practice-1" || rawVariant === "practice-2") {
-    return <PathFinderGame variant={rawVariant} />;
-  }
-
-  return (
-    <div className="flex-1 flex items-center justify-center p-8 text-muted-foreground">
-      {/* Empty placeholder for unrequested tests */}
-    </div>
-  );
+  return <PathFinderGame variant={rawVariant || "practice-1"} />;
 }

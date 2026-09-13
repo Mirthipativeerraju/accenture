@@ -14,7 +14,7 @@ export function PathFinderCell({ cell, isTileSelected = false }: PathFinderCellP
 
   return (
     <div
-      className={`w-[42px] h-[42px] border border-[#e5e7eb] dark:border-slate-800 flex items-center justify-center select-none transition-all duration-75 ${
+      className={`w-full h-full aspect-square border border-[#e5e7eb] dark:border-slate-800 flex items-center justify-center select-none transition-all duration-75 ${
         cell.active
           ? isTileSelected
             ? "bg-[#757575] text-white ring-2 ring-yellow-400 z-10 shadow-sm"
@@ -25,7 +25,7 @@ export function PathFinderCell({ cell, isTileSelected = false }: PathFinderCellP
       {cell.active && cell.arrowDirection && (
         <svg
           viewBox="0 0 24 24"
-          className="w-[22px] h-[22px] stroke-white fill-none"
+          className="w-4 h-4 sm:w-[22px] sm:h-[22px] stroke-white fill-none"
           style={{ transform: `rotate(${angle}deg)` }}
         >
           <path

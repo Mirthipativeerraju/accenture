@@ -36,7 +36,7 @@ export function PathFinderBoard({
     puzzle.gridRows;
 
   return (
-    <div className="relative flex items-center justify-center py-2 px-10">
+    <div className="relative flex items-center justify-center py-2 px-8 sm:px-10 w-full max-w-[458px]">
 
       {/* =========================================================
           DESTINATION
@@ -45,7 +45,8 @@ export function PathFinderBoard({
       <div
         className="
           absolute
-          right-0
+          right-0.5
+          sm:right-0
           -translate-y-1/2
           flex
           items-center
@@ -99,8 +100,9 @@ export function PathFinderBoard({
       <div
         className="
           relative
-          w-[378px]
-          h-[378px]
+          w-full
+          max-w-[378px]
+          aspect-square
           grid
           grid-cols-3
           grid-rows-3
@@ -121,7 +123,8 @@ export function PathFinderBoard({
           <div
             className="
               absolute
-              -left-10
+              -left-8
+              sm:-left-10
               -translate-y-1/2
               flex
               items-center
@@ -184,12 +187,12 @@ export function PathFinderBoard({
               flex
               items-center
               justify-center
+              w-8 h-8
+              sm:w-10 sm:h-10
             "
             style={{
-              left: `${animatingRocket.x}px`,
-              top: `${animatingRocket.y}px`,
-              width: "40px",
-              height: "40px",
+              left: `${(animatingRocket.x / 378) * 100}%`,
+              top: `${(animatingRocket.y / 378) * 100}%`,
 
               transform: `
                 translate(-50%, -50%)
@@ -217,7 +220,7 @@ function StartingRocket() {
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 1100 1014"
-      className="w-9 h-9 sm:w-10 sm:h-10"
+      className="w-8 h-8 sm:w-10 sm:h-10"
       aria-label="Start position"
     >
 

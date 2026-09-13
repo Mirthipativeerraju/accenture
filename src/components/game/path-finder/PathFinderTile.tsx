@@ -32,7 +32,7 @@ export function PathFinderTile({
           onSelect(tile.id);
         }
       }}
-      className={`relative w-[126px] h-[126px] grid grid-cols-3 grid-rows-3 cursor-pointer select-none transition-all duration-75 border border-[#9ca3af] ${
+      className={`relative w-full h-full aspect-square grid grid-cols-3 grid-rows-3 cursor-pointer select-none transition-all duration-75 border border-[#9ca3af] ${
         isSelected
           ? "ring-2 ring-yellow-400 border border-yellow-400 z-20"
           : "hover:bg-slate-50/50"

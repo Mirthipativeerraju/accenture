@@ -16,10 +16,6 @@ import { PathFinderControls } from "./PathFinderControls";
 import { PathFinderTimer } from "./PathFinderTimer";
 
 import {
-  PRACTICE_TEST_1_PUZZLES,
-} from "@/lib/games/path-finder/practice-1-puzzle";
-
-import {
   generatePractice2Questions,
 } from "@/lib/games/path-finder/practice-2-puzzle";
 
@@ -575,23 +571,26 @@ export function PathFinderGame({
   const puzzles:
     PuzzleDefinition[] =
     useMemo(() => {
-      if (
-        variant ===
-        "practice-2"
-      ) {
-        return generatePractice2Questions(
-          5
-        );
-      }
-
-      return PRACTICE_TEST_1_PUZZLES;
+      return generatePractice2Questions(
+        5
+      );
     }, [variant]);
 
-  const testTitle =
-    variant ===
-    "practice-2"
-      ? "Practice Test 2"
-      : "Practice Test 1";
+  const testTitle = useMemo(() => {
+    switch (variant) {
+      case "practice-2":
+        return "Practice Test 2";
+      case "practice-3":
+        return "Practice Test 3";
+      case "full-mock-test":
+      case "full-mock":
+      case "mock":
+        return "Full Mock Test";
+      case "practice-1":
+      default:
+        return "Practice Test 1";
+    }
+  }, [variant]);
 
   // ==========================================================================
   // GAME STATE
@@ -1990,24 +1989,24 @@ export function PathFinderGame({
   // ==========================================================================
 
   return (
-    <div className="w-full min-h-screen flex items-start justify-center bg-white text-black select-none px-4 pt-10">
-      <div className="w-full max-w-[650px] min-h-[650px] flex flex-col border border-[#b8b8b8] rounded-[6px] overflow-hidden bg-[#f3f3f3] relative">
+    <div className="w-full min-h-screen flex items-start justify-center bg-white text-black select-none px-2 sm:px-4 py-2 sm:pt-10">
+      <div className="w-full max-w-[650px] min-h-[580px] sm:min-h-[650px] flex flex-col border border-[#b8b8b8] rounded-[6px] overflow-hidden bg-[#f3f3f3] relative">
 
         {/* QUESTION HEADER */}
-        <div className="w-full h-[48px] bg-black flex items-center justify-between px-5 shrink-0">
-          <span className="text-white text-sm sm:text-base font-semibold tracking-tight">
+        <div className="w-full h-[48px] bg-black flex items-center justify-between px-3 sm:px-5 shrink-0">
+          <span className="text-white text-xs sm:text-base font-semibold tracking-tight">
             Path Finder - {testTitle}
           </span>
-          <span className="text-white text-sm sm:text-base font-semibold tracking-tight">
+          <span className="text-white text-xs sm:text-base font-semibold tracking-tight">
             Question {currentQuestionIndex + 1} of {puzzles.length}
           </span>
         </div>
 
         {/* GAME AREA */}
-        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 py-8">
+        <div className="flex-1 flex flex-col items-center justify-center w-full px-2 sm:px-4 py-4 sm:py-8">
 
           {/* BOARD + RESULT MODAL */}
-          <div className="relative shrink-0">
+          <div className="relative shrink-0 w-full flex items-center justify-center">
             <PathFinderBoard
               puzzle={currentPuzzle}
               tileStates={tileStates}

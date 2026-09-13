@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
@@ -19,7 +19,7 @@ export function PathFinderInstructions({
   onNext,
 }: PathFinderInstructionsProps) {
   return (
-    <div className="flex w-full flex-col items-center justify-center translate-y-8 py-6 px-4">
+    <div className="flex w-full flex-col items-center justify-center translate-y-2 sm:translate-y-8 py-4 sm:py-6 px-2 sm:px-4">
       <Card className="w-full max-w-2xl border bg-card text-card-foreground shadow-md rounded-2xl overflow-hidden">
 
         {/* Header */}
@@ -112,6 +112,7 @@ export function PathFinderInstructions({
         <CardFooter className="p-6 pt-0 flex justify-center">
           <Button
             size="lg"
+            aria-label="Next"
             className="w-full max-w-sm text-base font-bold h-13 tracking-wide uppercase bg-black hover:bg-neutral-800 text-white rounded-xl shadow-sm transition-transform active:scale-95"
             onClick={onNext}
           >
