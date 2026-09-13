@@ -1,70 +1,125 @@
 ﻿"use client";
 
 import React from "react";
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { RotateCw, ArrowLeftRight } from "lucide-react";
+import {
+  RotateCw,
+  ArrowLeftRight,
+  Target,
+  Move,
+  Clock,
+} from "lucide-react";
 
 interface PathFinderInstructionsProps {
   onNext: () => void;
 }
 
-export function PathFinderInstructions({ onNext }: PathFinderInstructionsProps) {
+export function PathFinderInstructions({
+  onNext,
+}: PathFinderInstructionsProps) {
   return (
-    <div className="flex-1 flex flex-col items-center justify-between p-6 max-w-4xl mx-auto w-full">
-      <div className="w-full space-y-6">
-        <div className="text-center space-y-2">
-          <h2 className="text-2xl font-bold tracking-tight text-foreground">
-            Path Finder Instructions
-          </h2>
-          <p className="text-muted-foreground text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
-            Your goal is to create a path from the icon on the left to the icon on the right by rotating the tiles and changing the arrow directions. You should try to generate a path in the least number of moves.
-          </p>
-        </div>
+    <div className="flex w-full flex-col items-center justify-center py-6 px-4">
+      <Card className="w-full max-w-2xl border bg-card text-card-foreground shadow-md rounded-2xl overflow-hidden">
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="border border-border/80 rounded-xl p-5 bg-card/60 space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-slate-700 text-white flex items-center justify-center shadow-sm">
+        {/* Header */}
+        <CardHeader className="text-center bg-neutral-900 text-white py-6">
+          <CardTitle className="text-2xl sm:text-3xl font-black tracking-tight">
+            Path Finder Instructions
+          </CardTitle>
+
+          <p className="mt-1 text-sm text-neutral-300">
+            Route Creation & Tile Navigation Assessment
+          </p>
+        </CardHeader>
+
+        {/* Instructions */}
+        <CardContent className="p-6 sm:p-8 space-y-6">
+
+          {/* Main Objective */}
+          <div className="rounded-xl border bg-neutral-50 dark:bg-neutral-900/40 p-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 shrink-0">
+                <Target className="w-5 h-5" />
+              </div>
+
+              <p className="text-sm sm:text-[15px] text-neutral-700 dark:text-neutral-300 leading-snug">
+                <strong>Goal:</strong> Create a path from the icon on the
+                left to the icon on the right by rotating the tiles and
+                changing the arrow directions. Try to generate the path in
+                the least number of moves.
+              </p>
+            </div>
+          </div>
+
+          {/* Rules */}
+          <div className="grid gap-3.5 text-sm sm:text-[15px] text-neutral-700 dark:text-neutral-300">
+
+            {/* Select Tile */}
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 shrink-0">
+                <Move className="w-5 h-5" />
+              </div>
+
+              <p className="leading-snug pt-1">
+                <strong>Select a Tile:</strong> Tap or click on a tile to
+                select it before using either control.
+              </p>
+            </div>
+
+            {/* Rotate */}
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 shrink-0">
                 <RotateCw className="w-5 h-5" />
               </div>
-              <h3 className="font-semibold text-lg text-foreground">ROTATE TILE</h3>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Rotates the selected 3×3 tile clockwise by 90 degrees.
-            </p>
-            <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-              <li>Tap/click on a tile to select it.</li>
-              <li>Tap/click the rotate button to rotate the tile clockwise.</li>
-            </ul>
-          </div>
 
-          <div className="border border-border/80 rounded-xl p-5 bg-card/60 space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-slate-700 text-white flex items-center justify-center shadow-sm">
+              <p className="leading-snug pt-1">
+                <strong>Rotate Tile:</strong> Tap or click the rotate button
+                to rotate the selected 3×3 tile clockwise by 90 degrees.
+              </p>
+            </div>
+
+            {/* Change Direction */}
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 shrink-0">
                 <ArrowLeftRight className="w-5 h-5" />
               </div>
-              <h3 className="font-semibold text-lg text-foreground">CHANGE ROUTE DIRECTION</h3>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Reverses the direction of the arrows inside the selected 3×3 tile.
-            </p>
-            <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-              <li>Tap/click the direction button to change the direction of route.</li>
-              <li>Does not move tile geometry or affect other tiles.</li>
-            </ul>
-          </div>
-        </div>
-      </div>
 
-      <div className="pt-8 pb-4 w-full flex justify-center">
-        <Button
-          size="lg"
-          onClick={onNext}
-          className="w-full sm:w-64 h-12 text-base font-semibold shadow-md"
-        >
-          NEXT
-        </Button>
-      </div>
+              <p className="leading-snug pt-1">
+                <strong>Change Route Direction:</strong> Tap or click the
+                direction button to reverse the direction of the arrows
+                inside the selected tile. The tile geometry does not move.
+              </p>
+            </div>
+
+            {/* Timer */}
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 shrink-0">
+                <Clock className="w-5 h-5" />
+              </div>
+
+              <p className="leading-snug pt-1">
+                <strong>Countdown Timer:</strong> You have a limited amount
+                of time to create the route. Your moves are counted when you
+                rotate a tile or change its route direction.
+              </p>
+            </div>
+
+          </div>
+        </CardContent>
+
+        {/* Footer */}
+        <CardFooter className="p-6 pt-0 flex justify-center">
+          <Button
+            size="lg"
+            className="w-full max-w-sm text-base font-bold h-13 tracking-wide uppercase bg-black hover:bg-neutral-800 text-white rounded-xl shadow-sm transition-transform active:scale-95"
+            onClick={onNext}
+          >
+            PRACTICE
+          </Button>
+        </CardFooter>
+
+      </Card>
     </div>
   );
 }

@@ -26,6 +26,7 @@ import {
 import {
   PuzzleDefinition,
   TileState,
+  ArrowDirection,
 } from "@/lib/games/path-finder/types";
 
 import {
@@ -34,6 +35,7 @@ import {
 
 import {
   getEffectiveTileCells,
+  getEffectivePorts,
   normalizeRotation,
   getTileFlipState,
   SHAPE_FLIP_STATES_COUNT,
@@ -210,7 +212,354 @@ function getShortestTurn(
 }
 
 // ============================================================================
+// INVALID-ROUTE ANIMATION PATH
+// ============================================================================
+//
+// The invalid animation must use the SAME physical route geometry as the
+// valid animation.  It must NOT treat a diagonal arrow (↖ ↗ ↘ ↙) as a
+// diagonal movement vector.
+//
+// In Practice Test 2, a tile is a 3x3 piece.  The route inside a CORNER,
+// T-JUNCTION or CROSS is represented by active cells.  The diagonal arrow in
+// the middle is a TURN marker.  Therefore the safest way to animate an
+// invalid route is:
+//
+//   1. Follow the same tile enter/exit ports used by validateTileRoute().
+//   2. Inside each tile, find the actual 4-neighbour active-cell path from
+//      the entered edge cell to the exited edge cell.
+//   3. Move to the next tile only through the selected exit port.
+//   4. Stop exactly where the validator's route breaks.
+//
+// This makes a curve behave like:
+//
+//       ←  ↖
+//          ↑
+//
+//   LEFT -> CENTER -> TOP
+//
+// rather than LEFT -> diagonal TOP-LEFT.
+// ============================================================================
+
+function getGlobalEffectiveCellsForInvalidAnimation(
+  puzzle: PuzzleDefinition,
+  tileStates: Record<string, TileState>
+): Map<
+  string,
+  {
+    active: boolean;
+    arrowDirection?: ArrowDirection;
+  }
+> {
+  const cells = new Map<
+    string,
+    {
+      active: boolean;
+      arrowDirection?: ArrowDirection;
+    }
+  >();
+
+  for (const tile of puzzle.tiles) {
+    const state = tileStates[tile.id] || {
+      rotation: 0,
+      flipped: false,
+      mode: 0,
+    };
+
+    const effectiveCells = getEffectiveTileCells(tile, state);
+    const startRow = tile.gridRow * puzzle.tileSize;
+    const startCol = tile.gridCol * puzzle.tileSize;
+
+    for (let r = 0; r < puzzle.tileSize; r++) {
+      for (let c = 0; c < puzzle.tileSize; c++) {
+        const cell = effectiveCells[r]?.[c];
+        if (!cell) continue;
+
+        cells.set(`${startRow + r},${startCol + c}`, {
+          active: Boolean(cell.active),
+          arrowDirection: cell.arrowDirection as ArrowDirection | undefined,
+        });
+      }
+    }
+  }
+
+  return cells;
+}
+
+function getLocalPortCell(port: string): { r: number; c: number } {
+  switch (port) {
+    case "TOP":
+      return { r: 0, c: 1 };
+    case "RIGHT":
+      return { r: 1, c: 2 };
+    case "BOTTOM":
+      return { r: 2, c: 1 };
+    case "LEFT":
+    default:
+      return { r: 1, c: 0 };
+  }
+}
+
+function getOppositePort(port: string): string {
+  switch (port) {
+    case "TOP":
+      return "BOTTOM";
+    case "RIGHT":
+      return "LEFT";
+    case "BOTTOM":
+      return "TOP";
+    case "LEFT":
+    default:
+      return "RIGHT";
+  }
+}
+
+/**
+ * Find the physical route through one 3x3 tile.
+ *
+ * Only 4-neighbour moves are allowed.  This is intentional: diagonal arrows
+ * are visual turn indicators, while the rocket travels through the active
+ * cells that form the route.
+ */
+function findTileRouteCells(
+  cells: ReturnType<typeof getEffectiveTileCells>,
+  enterPort: string,
+  exitPort: string
+): { r: number; c: number }[] | null {
+  const start = getLocalPortCell(enterPort);
+  const target = getLocalPortCell(exitPort);
+
+  if (!cells[start.r]?.[start.c]?.active) return null;
+  if (!cells[target.r]?.[target.c]?.active) return null;
+
+  const queue: { r: number; c: number }[] = [start];
+  const visited = new Set<string>([`${start.r},${start.c}`]);
+  const previous = new Map<string, string>();
+
+  const directions = [
+    { dr: -1, dc: 0 },
+    { dr: 0, dc: 1 },
+    { dr: 1, dc: 0 },
+    { dr: 0, dc: -1 },
+  ];
+
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    const currentKey = `${current.r},${current.c}`;
+
+    if (current.r === target.r && current.c === target.c) {
+      const result: { r: number; c: number }[] = [];
+      let key: string | undefined = currentKey;
+
+      while (key) {
+        const [r, c] = key.split(",").map(Number);
+        result.push({ r, c });
+        key = previous.get(key);
+      }
+
+      result.reverse();
+      return result;
+    }
+
+    for (const direction of directions) {
+      const nextR = current.r + direction.dr;
+      const nextC = current.c + direction.dc;
+
+      if (
+        nextR < 0 ||
+        nextR >= cells.length ||
+        nextC < 0 ||
+        nextC >= cells[0].length
+      ) {
+        continue;
+      }
+
+      if (!cells[nextR]?.[nextC]?.active) continue;
+
+      const nextKey = `${nextR},${nextC}`;
+      if (visited.has(nextKey)) continue;
+
+      visited.add(nextKey);
+      previous.set(nextKey, currentKey);
+      queue.push({ r: nextR, c: nextC });
+    }
+  }
+
+  return null;
+}
+
+function getNextTileFromExit(
+  tileRow: number,
+  tileCol: number,
+  exitPort: string
+): {
+  row: number;
+  col: number;
+  enterPort: string;
+} | null {
+  switch (exitPort) {
+    case "TOP":
+      return {
+        row: tileRow - 1,
+        col: tileCol,
+        enterPort: "BOTTOM",
+      };
+    case "RIGHT":
+      return {
+        row: tileRow,
+        col: tileCol + 1,
+        enterPort: "LEFT",
+      };
+    case "BOTTOM":
+      return {
+        row: tileRow + 1,
+        col: tileCol,
+        enterPort: "TOP",
+      };
+    case "LEFT":
+      return {
+        row: tileRow,
+        col: tileCol - 1,
+        enterPort: "RIGHT",
+      };
+    default:
+      return null;
+  }
+}
+
+function buildInvalidArrowAnimationPath(
+  puzzle: PuzzleDefinition,
+  tileStates: Record<string, TileState>
+): {
+  path: { r: number; c: number }[];
+} {
+  const globalCells = getGlobalEffectiveCellsForInvalidAnimation(
+    puzzle,
+    tileStates
+  );
+
+  const path: { r: number; c: number }[] = [];
+  const visitedTiles = new Set<string>();
+
+  let tileRow = Math.floor(puzzle.startPos.row / puzzle.tileSize);
+  let tileCol = Math.floor(puzzle.startPos.col / puzzle.tileSize);
+  let enterPort: string = puzzle.startPos.entrySide || "LEFT";
+
+  const appendGlobalCell = (row: number, col: number) => {
+    const key = `${row},${col}`;
+    if (!globalCells.get(key)?.active) return;
+
+    const last = path[path.length - 1];
+    if (!last || last.r !== row || last.c !== col) {
+      path.push({ r: row, c: col });
+    }
+  };
+
+  // Always include the actual start cell if it is active.
+  appendGlobalCell(puzzle.startPos.row, puzzle.startPos.col);
+
+  const maxTiles = puzzle.tileRows * puzzle.tileCols;
+
+  for (let step = 0; step < maxTiles; step++) {
+    if (
+      tileRow < 0 ||
+      tileRow >= puzzle.tileRows ||
+      tileCol < 0 ||
+      tileCol >= puzzle.tileCols
+    ) {
+      break;
+    }
+
+    const tile = puzzle.tiles.find(
+      (candidate) =>
+        candidate.gridRow === tileRow &&
+        candidate.gridCol === tileCol
+    );
+
+    if (!tile) break;
+
+    const tileKey = `${tileRow},${tileCol}`;
+    if (visitedTiles.has(tileKey)) break;
+    visitedTiles.add(tileKey);
+
+    const state = tileStates[tile.id] || {
+      rotation: 0,
+      flipped: false,
+      mode: 0,
+    };
+
+    const effectiveCells = getEffectiveTileCells(tile, state);
+
+    // Use the SAME effective ports that the validator uses.
+    // This is critical: the animation and validation must agree on which
+    // side of the tile is the entry and which side is the exit.
+    const effectivePorts = getEffectivePorts(tile, state);
+
+    const actualEnter = effectivePorts.enter;
+    const actualExit = effectivePorts.exit;
+
+    if (!actualEnter || !actualExit) {
+      break;
+    }
+
+    // The current tile can only be entered if its effective entry port
+    // matches the direction from which the rocket arrived.
+    if (actualEnter !== enterPort) {
+      break;
+    }
+
+    const tileRoute = findTileRouteCells(
+      effectiveCells,
+      actualEnter,
+      actualExit
+    );
+
+    if (!tileRoute || tileRoute.length === 0) {
+      break;
+    }
+
+    for (const localCell of tileRoute) {
+      appendGlobalCell(
+        tile.gridRow * puzzle.tileSize + localCell.r,
+        tile.gridCol * puzzle.tileSize + localCell.c
+      );
+    }
+
+    // If this is the destination tile and the exit matches the destination,
+    // the validator would have accepted the route.  Since this helper is only
+    // used for invalid routes, continue normally only when the validator would
+    // not yet have stopped.
+    if (
+      tileRow === Math.floor(puzzle.destinationPos.row / puzzle.tileSize) &&
+      tileCol === Math.floor(puzzle.destinationPos.col / puzzle.tileSize) &&
+      actualExit === (puzzle.destinationPos.exitSide || "RIGHT")
+    ) {
+      break;
+    }
+
+    const next = getNextTileFromExit(
+      tileRow,
+      tileCol,
+      actualExit
+    );
+
+    if (!next) break;
+
+    tileRow = next.row;
+    tileCol = next.col;
+    enterPort = next.enterPort;
+
+    // Do not fabricate movement into another tile here.  The next iteration
+    // will add its entry cell only if that tile actually accepts the route.
+    // This is exactly where an invalid connection stops.
+  }
+
+  return { path };
+}
+
+// ============================================================================
 // MAIN GAME
+// ============================================================================
+
 // ============================================================================
 
 export function PathFinderGame({
@@ -812,19 +1161,281 @@ export function PathFinderGame({
       // ------------------------------------------------------------------------
       // INVALID
       // ------------------------------------------------------------------------
+      //
+      // IMPORTANT:
+      // Do NOT show "Invalid Route" here immediately.
+      //
+      // First animate the rocket through every active cell that the current
+      // arrows can actually reach. The animation stops at the exact point
+      // where the route breaks. Only after that animation finishes do we show
+      // "Invalid Route".
+      //
+      // The VALID branch below is intentionally left unchanged.
+      // ------------------------------------------------------------------------
 
       if (
         !validationResult.isValid
       ) {
         console.log(
-          "[PATHFINDER] INVALID ROUTE"
+          "[PATHFINDER] INVALID ROUTE - tracing reachable path first"
         );
 
-        setFeedback({
-          type: "error",
-          message:
-            "Invalid Route",
-        });
+        const invalidPath =
+          buildInvalidArrowAnimationPath(
+            currentPuzzle,
+            tileStates
+          ).path;
+
+        if (
+          invalidPath.length === 0
+        ) {
+          setFeedback({
+            type: "error",
+            message:
+              "Invalid Route",
+          });
+          return;
+        }
+
+        setIsSubmitting(
+          true
+        );
+
+        setSelectedTileId(
+          null
+        );
+
+        // Make sure the old feedback is hidden while the rocket is moving.
+        setFeedback(null);
+
+        const startPosition =
+          getStartRocketPosition(
+            currentPuzzle.startPos.row
+          );
+
+        const animationPoints = [
+          startPosition,
+          ...invalidPath.map(
+            cellToPixel
+          ),
+        ];
+
+        const headings =
+          animationPoints.map(
+            (
+              point,
+              index
+            ) => {
+              if (
+                index === 0
+              ) {
+                return 0;
+              }
+
+              const previous =
+                animationPoints[
+                  index - 1
+                ];
+
+              const dx =
+                point.x -
+                previous.x;
+
+              const dy =
+                point.y -
+                previous.y;
+
+              if (
+                Math.abs(dx) > 0 &&
+                Math.abs(dy) < 0.01
+              ) {
+                return dx >= 0
+                  ? 0
+                  : 180;
+              }
+
+              if (
+                Math.abs(dy) > 0 &&
+                Math.abs(dx) < 0.01
+              ) {
+                return dy >= 0
+                  ? 90
+                  : 270;
+              }
+
+              if (
+                dx > 0 &&
+                dy > 0
+              ) {
+                return 45;
+              }
+
+              if (
+                dx < 0 &&
+                dy > 0
+              ) {
+                return 135;
+              }
+
+              if (
+                dx < 0 &&
+                dy < 0
+              ) {
+                return 225;
+              }
+
+              if (
+                dx > 0 &&
+                dy < 0
+              ) {
+                return 315;
+              }
+
+              return 0;
+            }
+          );
+
+        let segmentIndex = 0;
+        let segmentStartTime:
+          | number
+          | null = null;
+        let currentAngle =
+          headings[0] ?? 0;
+
+        const animateInvalid =
+          (
+            timestamp: number
+          ) => {
+            if (
+              segmentIndex >=
+              animationPoints.length - 1
+            ) {
+              const finalPoint =
+                animationPoints[
+                  animationPoints.length - 1
+                ];
+
+              setAnimatingRocket({
+                x: finalPoint.x,
+                y: finalPoint.y,
+                angle: currentAngle,
+              });
+
+              // The route result is reported ONLY after the rocket reaches
+              // the last reachable active cell.
+              setFeedback({
+                type: "error",
+                message:
+                  "Invalid Route",
+              });
+
+              // Keep the question locked until CONTINUE is pressed.
+              setIsSubmitting(
+                true
+              );
+
+              animationFrameRef.current =
+                null;
+
+              return;
+            }
+
+            if (
+              segmentStartTime === null
+            ) {
+              segmentStartTime =
+                timestamp;
+            }
+
+            const elapsed =
+              timestamp -
+              segmentStartTime;
+
+            const progress =
+              Math.min(
+                elapsed /
+                  ROCKET_SEGMENT_DURATION,
+                1
+              );
+
+            const eased =
+              easeInOut(
+                progress
+              );
+
+            const from =
+              animationPoints[
+                segmentIndex
+              ];
+
+            const to =
+              animationPoints[
+                segmentIndex + 1
+              ];
+
+            const x =
+              from.x +
+              (to.x - from.x) *
+                eased;
+
+            const y =
+              from.y +
+              (to.y - from.y) *
+                eased;
+
+            const targetAngle =
+              headings[
+                segmentIndex + 1
+              ] ?? currentAngle;
+
+            const targetContinuousAngle =
+              getShortestTurn(
+                currentAngle,
+                targetAngle
+              );
+
+            currentAngle =
+              currentAngle +
+              (targetContinuousAngle -
+                currentAngle) *
+                0.18;
+
+            if (
+              Math.abs(
+                targetContinuousAngle -
+                  currentAngle
+              ) < 0.5
+            ) {
+              currentAngle =
+                targetContinuousAngle;
+            }
+
+            setAnimatingRocket({
+              x,
+              y,
+              angle: currentAngle,
+            });
+
+            if (
+              progress >= 1
+            ) {
+              currentAngle =
+                targetAngle;
+              segmentIndex += 1;
+              segmentStartTime =
+                null;
+            }
+
+            animationFrameRef.current =
+              requestAnimationFrame(
+                animateInvalid
+              );
+          };
+
+        animationFrameRef.current =
+          requestAnimationFrame(
+            animateInvalid
+          );
 
         return;
       }
@@ -1228,6 +1839,36 @@ export function PathFinderGame({
     ]);
 
   // ==========================================================================
+  // RESULT MODAL — CONTINUE
+  // ==========================================================================
+
+  const handleContinue =
+    useCallback(() => {
+      stopRocketAnimation();
+
+      setFeedback(null);
+      setAnimatingRocket(null);
+
+      if (
+        currentQuestionIndex + 1 <
+        puzzles.length
+      ) {
+        loadQuestion(
+          currentQuestionIndex + 1
+        );
+        return;
+      }
+
+      setIsSubmitting(false);
+      setStage("COMPLETED");
+    }, [
+      currentQuestionIndex,
+      puzzles.length,
+      loadQuestion,
+      stopRocketAnimation,
+    ]);
+
+  // ==========================================================================
   // INSTRUCTIONS
   // ==========================================================================
 
@@ -1353,29 +1994,11 @@ export function PathFinderGame({
       <div className="flex flex-col items-center gap-5 w-full max-w-lg">
 
         {/* ================================================================== */}
-        {/* FEEDBACK                                                           */}
+        {/* BOARD + RESULT MODAL                                               */}
         {/* ================================================================== */}
 
-        {feedback && (
-          <div
-            className={`text-xs font-medium px-3 py-1 rounded-full ${
-              feedback.type ===
-              "success"
-                ? "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300"
-                : "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300"
-            }`}
-          >
-            {
-              feedback.message
-            }
-          </div>
-        )}
-
-        {/* ================================================================== */}
-        {/* BOARD                                                              */}
-        {/* ================================================================== */}
-
-        <PathFinderBoard
+        <div className="relative">
+          <PathFinderBoard
           puzzle={
             currentPuzzle
           }
@@ -1409,7 +2032,28 @@ export function PathFinderGame({
               null
             );
           }}
-        />
+          />
+
+          {feedback && (
+            <div className="absolute inset-0 z-50 flex items-start justify-center pt-4 sm:pt-6">
+              <div className="w-[calc(100%-24px)] max-w-[330px] rounded-md border border-slate-300 bg-white px-6 py-5 text-center shadow-lg dark:border-slate-700 dark:bg-slate-900">
+                <div className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                  {feedback.type === "success"
+                    ? "Valid route - well done!"
+                    : "Invalid route"}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleContinue}
+                  className="mt-4 inline-flex min-w-[92px] items-center justify-center rounded-md bg-black px-4 py-2 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-slate-800 active:scale-95 dark:bg-white dark:text-black dark:hover:bg-slate-200"
+                >
+                  Continue
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* ================================================================== */}
         {/* TIMER + CONTROLS                                                   */}
