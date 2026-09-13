@@ -1,5 +1,10 @@
 import { PuzzleDefinition, TileDefinition, TilePort, TileState, TileType } from "./types";
-import { getEffectivePorts, getEffectiveTileCells } from "./transformations";
+import {
+  getEffectivePorts,
+  getEffectiveTileCells,
+  getTileFlipState,
+  SHAPE_FLIP_STATES_COUNT,
+} from "./transformations";
 import { validateRoute } from "./validator";
 
 export function createSeededRng(seed: number): () => number {
@@ -17,7 +22,7 @@ export function getPuzzleSignature(puzzle: PuzzleDefinition): string {
     .map((t) => {
       const sol = puzzle.solution?.tileStates[t.id];
       const init = puzzle.initialTileStates[t.id];
-      return `${t.id}:${t.type}:${sol?.rotation ?? 0},${sol?.flipped ? 1 : 0},${sol?.mode ?? 0}:${init?.rotation ?? 0},${init?.flipped ? 1 : 0},${init?.mode ?? 0}`;
+      return `${t.id}:${t.type}:${sol?.rotation ?? 0},${sol?.flipState ?? sol?.mode ?? 0}:${init?.rotation ?? 0},${init?.flipState ?? init?.mode ?? 0}`;
     })
     .join(";");
   return `${routeSig}|${tileSig}`;
@@ -91,23 +96,26 @@ function getMatchingTileConfigs(
   const tileTypes: TileType[] = ["STRAIGHT", "CORNER", "T_JUNCTION", "CROSS"];
 
   for (const type of tileTypes) {
-    const modes: (0 | 1 | 2 | 3)[] = type === "T_JUNCTION" || type === "CROSS" ? [0, 1, 2, 3] : [0];
-    const flips: boolean[] = type === "STRAIGHT" || type === "CORNER" ? [false, true] : [false];
-    for (const mode of modes) {
-      for (const flipped of flips) {
-        for (const rotation of [0, 1, 2, 3] as (0 | 1 | 2 | 3)[]) {
-          const dummyTile: TileDefinition = {
-            id: `T${gridRow}${gridCol}`,
-            gridRow,
-            gridCol,
-            type,
-            cells: [],
-          };
-          const st: TileState = { rotation, flipped, mode };
-          const ports = getEffectivePorts(dummyTile, st);
-          if (ports.enter === enterPort && ports.exit === exitPort) {
-            configs.push({ type, state: st });
-          }
+    const maxFlips = SHAPE_FLIP_STATES_COUNT[type] || 2;
+    for (let flipState = 0; flipState < maxFlips; flipState++) {
+      for (const rotation of [0, 1, 2, 3] as (0 | 1 | 2 | 3)[]) {
+        const dummyTile: TileDefinition = {
+          id: `T${gridRow}${gridCol}`,
+          gridRow,
+          gridCol,
+          type,
+          cells: [],
+        };
+        const st: TileState = {
+          rotation,
+          flipState,
+          mode: flipState,
+          flipped: flipState % 2 === 1,
+          directionReversed: flipState % 2 === 1,
+        };
+        const ports = getEffectivePorts(dummyTile, st);
+        if (ports.enter === enterPort && ports.exit === exitPort) {
+          configs.push({ type, state: st });
         }
       }
     }
@@ -160,13 +168,19 @@ export function generatePractice2Question(
           // Decoy tile
           type = tileTypesList[Math.floor(rng() * tileTypesList.length)];
           const rotation = Math.floor(rng() * 4) as 0 | 1 | 2 | 3;
-          const flipped = rng() > 0.5;
-          const mode = Math.floor(rng() * 4) as 0 | 1 | 2 | 3;
-          solState = { rotation, flipped, mode };
+          const maxFlips = SHAPE_FLIP_STATES_COUNT[type] || 2;
+          const flipState = Math.floor(rng() * maxFlips);
+          solState = {
+            rotation,
+            flipState,
+            mode: flipState,
+            flipped: flipState % 2 === 1,
+            directionReversed: flipState % 2 === 1,
+          };
         }
 
         const dummyTile = { id: tileId, gridRow: r, gridCol: c, type, cells: [] };
-        const baseCells = getEffectiveTileCells(dummyTile as TileDefinition, { rotation: 0, flipped: false, mode: 0 });
+        const baseCells = getEffectiveTileCells(dummyTile as TileDefinition, { rotation: 0, flipState: 0 });
 
         tiles.push({
           id: tileId,
@@ -216,25 +230,23 @@ export function generatePractice2Question(
     for (const t of tiles) {
       const sol = solutionTileStates[t.id];
       const rotDelta = Math.floor(rng() * 4) as 0 | 1 | 2 | 3;
-      let flipped = sol.flipped ?? false;
-      let mode = sol.mode ?? 0;
-
-      if (t.type === "T_JUNCTION" || t.type === "CROSS") {
-        const modeDelta = Math.floor(rng() * 4) as 0 | 1 | 2 | 3;
-        mode = (((mode + modeDelta) % 4) as 0 | 1 | 2 | 3);
-        if (modeDelta > 0) scrambledMoves += modeDelta;
-      } else {
-        const doFlip = rng() > 0.5;
-        if (doFlip) {
-          flipped = !flipped;
-          scrambledMoves += 1;
-        }
-      }
+      const tileType = t.type || "STRAIGHT";
+      const maxFlips = SHAPE_FLIP_STATES_COUNT[tileType] || 2;
+      const curFlip = getTileFlipState(tileType, sol);
+      const flipDelta = Math.floor(rng() * maxFlips);
+      const newFlip = (curFlip + flipDelta) % maxFlips;
+      if (flipDelta > 0) scrambledMoves += flipDelta;
 
       const rotation = (((sol.rotation + rotDelta) % 4) as 0 | 1 | 2 | 3);
       if (rotDelta > 0) scrambledMoves += rotDelta;
 
-      initialTileStates[t.id] = { rotation, flipped, mode };
+      initialTileStates[t.id] = {
+        rotation,
+        flipState: newFlip,
+        mode: newFlip,
+        flipped: newFlip % 2 === 1,
+        directionReversed: newFlip % 2 === 1,
+      };
     }
 
     candidatePuzzle.initialTileStates = initialTileStates;

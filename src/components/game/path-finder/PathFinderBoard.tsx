@@ -1,7 +1,10 @@
 "use client";
 
 import React from "react";
-import { PuzzleDefinition, TileState } from "@/lib/games/path-finder/types";
+import {
+  PuzzleDefinition,
+  TileState,
+} from "@/lib/games/path-finder/types";
 import { PathFinderTile } from "./PathFinderTile";
 
 interface PathFinderBoardProps {
@@ -9,7 +12,11 @@ interface PathFinderBoardProps {
   tileStates: Record<string, TileState>;
   selectedTileId: string | null;
   onSelectTile: (tileId: string) => void;
-  animatingRocket?: { x: number; y: number; angle: number } | null;
+  animatingRocket?: {
+    x: number;
+    y: number;
+    angle: number;
+  } | null;
 }
 
 export function PathFinderBoard({
@@ -20,48 +27,250 @@ export function PathFinderBoard({
   animatingRocket,
 }: PathFinderBoardProps) {
   // Start and Destination row calculations for vertical positioning
-  const startRowRatio = (puzzle.startPos.row + 0.5) / puzzle.gridRows;
-  const destRowRatio = (puzzle.destinationPos.row + 0.5) / puzzle.gridRows;
+  const startRowRatio =
+    (puzzle.startPos.row + 0.5) / puzzle.gridRows;
+
+  const destRowRatio =
+    (puzzle.destinationPos.row + 0.5) / puzzle.gridRows;
 
   return (
     <div className="relative flex items-center justify-center py-2 px-10">
-      {/* START ICON on the LEFT */}
-      <div
-        className="absolute left-0 -translate-y-1/2 flex items-center pr-1 pointer-events-none z-10"
-        style={{ top: `${startRowRatio * 100}%` }}
-      >
-        <svg
-          viewBox="0 0 40 40"
-          className="w-7 h-7 sm:w-8 sm:h-8 text-slate-800 dark:text-slate-200 fill-current"
-          aria-label="Start position"
-        >
-          <path d="M4 14 L18 14 L28 20 L18 26 L4 26 L8 20 Z" />
-          <circle cx="14" cy="20" r="3" className="fill-white" />
-          <line x1="2" y1="20" x2="6" y2="20" stroke="white" strokeWidth="2" />
-        </svg>
-      </div>
 
-      {/* DESTINATION ICON on the RIGHT */}
+      {/* =========================================================
+          DESTINATION ICON on the RIGHT
+          ========================================================= */}
       <div
         className="absolute right-0 -translate-y-1/2 flex items-center pl-1 pointer-events-none z-10"
-        style={{ top: `${destRowRatio * 100}%` }}
+        style={{
+          top: `${destRowRatio * 100}%`,
+        }}
       >
         <svg
           viewBox="0 0 40 40"
           className="w-7 h-7 sm:w-8 sm:h-8 text-slate-800 dark:text-slate-200 fill-current"
           aria-label="Destination position"
         >
-          <circle cx="20" cy="20" r="13" fill="none" stroke="currentColor" strokeWidth="2.5" />
-          <circle cx="20" cy="20" r="7" />
-          <circle cx="16" cy="16" r="2.5" className="fill-white" />
+          <circle
+            cx="20"
+            cy="20"
+            r="13"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+          />
+
+          <circle
+            cx="20"
+            cy="20"
+            r="7"
+          />
+
+          <circle
+            cx="16"
+            cy="16"
+            r="2.5"
+            className="fill-white"
+          />
         </svg>
       </div>
 
-      {/* 9x9 PUZZLE BOARD CONTAINER (3x3 grid of 3x3 tiles, total 378px x 378px) */}
-      <div className="relative w-[378px] h-[378px] grid grid-cols-3 grid-rows-3 border-[3px] border-[#9ca3af] bg-white dark:bg-slate-900 shadow-sm select-none">
+      {/* =========================================================
+          9x9 PUZZLE BOARD CONTAINER
+          3x3 grid of 3x3 tiles
+          ========================================================= */}
+      <div
+        className="
+          relative
+          w-[378px]
+          h-[378px]
+          grid
+          grid-cols-3
+          grid-rows-3
+          border-[3px]
+          border-[#9ca3af]
+          bg-white
+          dark:bg-slate-900
+          shadow-sm
+          select-none
+        "
+      >
+
+        {/* =======================================================
+            START ROCKET
+            Positioned relative to the actual board so that it
+            stays vertically centered with the starting tile row.
+            ======================================================= */}
+        <div
+          className="
+            absolute
+            -left-10
+            -translate-y-1/2
+            flex
+            items-center
+            pointer-events-none
+            z-10
+          "
+          style={{
+            top: `${startRowRatio * 100}%`,
+          }}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 1100 1014"
+            className="w-9 h-9 sm:w-10 sm:h-10"
+            aria-label="Start position"
+          >
+            {/* Main rocket body */}
+            <path
+              d="
+                M 0 311
+                C 85 315, 190 327, 343 350
+                C 405 359, 510 368, 620 382
+                C 735 397, 825 412, 856 442
+                C 874 459, 883 477, 883 493
+                C 883 510, 874 528, 856 545
+                C 825 575, 735 590, 620 605
+                C 510 619, 405 629, 343 638
+                C 300 645, 270 667, 238 700
+                L 130 816
+                C 112 835, 90 846, 66 846
+                L 0 846
+                Z
+              "
+              fill="#000000"
+            />
+
+            {/* Upper wing / fin */}
+            <path
+              d="
+                M 0 113
+                L 68 113
+                C 91 113, 111 123, 128 140
+                L 348 347
+                C 330 347, 313 344, 295 340
+                L 0 310
+                Z
+              "
+              fill="#000000"
+            />
+
+            {/* Lower wing / fin */}
+            <path
+              d="
+                M 0 846
+                L 68 846
+                C 91 846, 111 836, 128 819
+                L 348 638
+                C 330 638, 313 641, 295 645
+                L 0 675
+                Z
+              "
+              fill="#000000"
+            />
+
+            {/* Upper white cutout */}
+            <path
+              d="
+                M 10 159
+                L 32 159
+                L 32 310
+                L 10 307
+                Z
+              "
+              fill="#ffffff"
+            />
+
+            <path
+              d="
+                M 48 159
+                L 65 159
+                C 78 159, 91 165, 101 175
+                L 186 302
+                C 194 314, 186 331, 171 331
+                C 130 328, 91 322, 48 316
+                Z
+              "
+              fill="#ffffff"
+            />
+
+            {/* Lower white cutout */}
+            <path
+              d="
+                M 10 671
+                L 32 674
+                L 32 822
+                L 10 822
+                Z
+              "
+              fill="#ffffff"
+            />
+
+            <path
+              d="
+                M 48 669
+                C 91 663, 130 657, 171 650
+                C 186 648, 194 665, 186 677
+                L 101 802
+                C 91 812, 78 818, 65 818
+                L 48 818
+                Z
+              "
+              fill="#ffffff"
+            />
+
+            {/* Central horizontal white stripe */}
+            <path
+              d="
+                M 40 483
+                L 552 483
+                L 552 506
+                L 40 506
+                Z
+              "
+              fill="#ffffff"
+            />
+
+            {/* Cockpit / front window */}
+            <path
+              d="
+                M 617 439
+                C 604 439, 594 447, 592 462
+                L 592 516
+                C 594 531, 604 545, 617 545
+                L 720 533
+                C 733 531, 742 522, 742 509
+                L 742 475
+                C 742 462, 733 453, 720 451
+                Z
+              "
+              fill="#ffffff"
+            />
+
+            {/* Left / rear central cutout */}
+            <path
+              d="
+                M 0 402
+                C 17 402, 28 412, 28 428
+                L 28 571
+                C 28 587, 17 597, 0 597
+                Z
+              "
+              fill="#ffffff"
+            />
+          </svg>
+        </div>
+
+        {/* =======================================================
+            PUZZLE TILES
+            ======================================================= */}
         {puzzle.tiles.map((tile) => {
           const isSelected = selectedTileId === tile.id;
-          const state = tileStates[tile.id] || { rotation: 0, directionReversed: false };
+
+          const state =
+            tileStates[tile.id] || {
+              rotation: 0,
+              directionReversed: false,
+            };
 
           return (
             <PathFinderTile
@@ -74,10 +283,25 @@ export function PathFinderBoard({
           );
         })}
 
-        {/* ROCKET ANIMATION OVERLAY */}
+        {/* =======================================================
+            ROCKET ANIMATION OVERLAY
+            UNCHANGED FOR NOW
+            ======================================================= */}
         {animatingRocket && (
           <div
-            className="absolute pointer-events-none z-30 transition-all duration-100 ease-linear flex items-center justify-center w-8 h-8"
+            className="
+              absolute
+              pointer-events-none
+              z-30
+              transition-all
+              duration-100
+              ease-linear
+              flex
+              items-center
+              justify-center
+              w-8
+              h-8
+            "
             style={{
               left: `${animatingRocket.x}px`,
               top: `${animatingRocket.y}px`,
@@ -89,7 +313,13 @@ export function PathFinderBoard({
               className="w-7 h-7 text-amber-500 fill-current drop-shadow-md"
             >
               <path d="M12 2.5s3 3.5 3 7.5c0 2-.5 4-1.5 5.5l1.5 3.5-3-1.5-3 1.5 1.5-3.5C9.5 14 9 12 9 10c0-4 3-7.5 3-7.5z" />
-              <circle cx="12" cy="8" r="1.5" className="fill-white" />
+
+              <circle
+                cx="12"
+                cy="8"
+                r="1.5"
+                className="fill-white"
+              />
             </svg>
           </div>
         )}

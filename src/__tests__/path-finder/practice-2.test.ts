@@ -11,10 +11,13 @@ import {
   rotateTile,
   reverseTileDirection,
   rotateArrowDirection,
+  reverseArrow,
   getBaseTileGeometry,
   getEffectivePorts,
   getEffectiveTileCells,
   normalizeRotation,
+  SHAPE_FLIP_STATES_COUNT,
+  getTileFlipState,
 } from "@/lib/games/path-finder/transformations";
 import { validateRoute, validateTileRoute } from "@/lib/games/path-finder/validator";
 import { ArrowDirection, RouteCell, TileDefinition, TileState } from "@/lib/games/path-finder/types";
@@ -27,17 +30,14 @@ vi.mock("next/navigation", () => ({
   useParams: () => ({ variant: "practice-2" }),
 }));
 
-describe("Path Finder Practice Test 2 — Canonical 5-Question System Verification", () => {
-  it("TEST 1: Default Practice Test 2 generates exactly 5 questions", () => {
-    const questions = generatePractice2Questions(5);
-    expect(questions.length).toBe(5);
-    for (let i = 0; i < 5; i++) {
-      expect(questions[i].id).toBe(`practice-2-q${i + 1}`);
-      expect(questions[i].gridRows).toBe(9);
-      expect(questions[i].gridCols).toBe(9);
-      expect(questions[i].tileSize).toBe(3);
-      expect(questions[i].tiles.length).toBe(9);
-    }
+describe("Path Finder Practice Test 2 — Canonical Model & Reversible Direction Specification", () => {
+  it("TEST 1: Canonical SHAPE_FLIP_STATES_COUNT (STRAIGHT=2, CORNER=2, T_JUNCTION=6, CROSS=8)", () => {
+    expect(SHAPE_FLIP_STATES_COUNT).toEqual({
+      STRAIGHT: 2,
+      CORNER: 2,
+      T_JUNCTION: 6,
+      CROSS: 8,
+    });
   });
 
   it("TEST 2: Canonical 90° Clockwise Arrow Direction Mapping (All 8 Directions)", () => {
@@ -51,107 +51,132 @@ describe("Path Finder Practice Test 2 — Canonical 5-Question System Verificati
     expect(rotateArrowDirection("UP_RIGHT", 1)).toBe("DOWN_RIGHT");
   });
 
-  it("TEST 3: Complete 4-State Arrow Rotation Table (8 directions × 4 rotation states = 32 assertions)", () => {
-    const table: Record<ArrowDirection, [ArrowDirection, ArrowDirection, ArrowDirection, ArrowDirection]> = {
-      RIGHT: ["RIGHT", "DOWN", "LEFT", "UP"],
-      DOWN_RIGHT: ["DOWN_RIGHT", "DOWN_LEFT", "UP_LEFT", "UP_RIGHT"],
-      DOWN: ["DOWN", "LEFT", "UP", "RIGHT"],
-      DOWN_LEFT: ["DOWN_LEFT", "UP_LEFT", "UP_RIGHT", "DOWN_RIGHT"],
-      LEFT: ["LEFT", "UP", "RIGHT", "DOWN"],
-      UP_LEFT: ["UP_LEFT", "UP_RIGHT", "DOWN_RIGHT", "DOWN_LEFT"],
-      UP: ["UP", "RIGHT", "DOWN", "LEFT"],
-      UP_RIGHT: ["UP_RIGHT", "DOWN_RIGHT", "DOWN_LEFT", "UP_LEFT"],
-    };
+  it("TEST 3: Canonical Opposite Direction Mapping (All 8 Directions)", () => {
+    expect(reverseArrow("RIGHT")).toBe("LEFT");
+    expect(reverseArrow("LEFT")).toBe("RIGHT");
+    expect(reverseArrow("UP")).toBe("DOWN");
+    expect(reverseArrow("DOWN")).toBe("UP");
+    expect(reverseArrow("UP_RIGHT")).toBe("DOWN_LEFT");
+    expect(reverseArrow("DOWN_LEFT")).toBe("UP_RIGHT");
+    expect(reverseArrow("DOWN_RIGHT")).toBe("UP_LEFT");
+    expect(reverseArrow("UP_LEFT")).toBe("DOWN_RIGHT");
+  });
 
-    const allDirections: ArrowDirection[] = [
-      "RIGHT",
-      "DOWN_RIGHT",
-      "DOWN",
-      "DOWN_LEFT",
-      "LEFT",
-      "UP_LEFT",
-      "UP",
-      "UP_RIGHT",
+  it("TEST 4: Canonical STRAIGHT Tile States (2 states: 0: ← ← ←, 1: → → →)", () => {
+    const s0 = getBaseTileGeometry("STRAIGHT", 0);
+    const s1 = getBaseTileGeometry("STRAIGHT", 1);
+
+    expect(s0.ports).toEqual({ enter: "RIGHT", exit: "LEFT" });
+    expect(s0.cells[1][0]).toEqual({ active: true, arrowDirection: "LEFT" });
+    expect(s0.cells[1][1]).toEqual({ active: true, arrowDirection: "LEFT" });
+    expect(s0.cells[1][2]).toEqual({ active: true, arrowDirection: "LEFT" });
+
+    expect(s1.ports).toEqual({ enter: "LEFT", exit: "RIGHT" });
+    expect(s1.cells[1][0]).toEqual({ active: true, arrowDirection: "RIGHT" });
+    expect(s1.cells[1][1]).toEqual({ active: true, arrowDirection: "RIGHT" });
+    expect(s1.cells[1][2]).toEqual({ active: true, arrowDirection: "RIGHT" });
+  });
+
+  it("TEST 5: Canonical CORNER Tile States (2 states: 0: RIGHT->TOP, 1: TOP->RIGHT)", () => {
+    const c0 = getBaseTileGeometry("CORNER", 0);
+    const c1 = getBaseTileGeometry("CORNER", 1);
+
+    expect(c0.ports).toEqual({ enter: "RIGHT", exit: "TOP" });
+    expect(c0.cells[0][1]).toEqual({ active: true, arrowDirection: "UP" });
+    expect(c0.cells[1][1]).toEqual({ active: true, arrowDirection: "UP_LEFT" });
+    expect(c0.cells[1][2]).toEqual({ active: true, arrowDirection: "LEFT" });
+
+    expect(c1.ports).toEqual({ enter: "TOP", exit: "RIGHT" });
+    expect(c1.cells[0][1]).toEqual({ active: true, arrowDirection: "DOWN" });
+    expect(c1.cells[1][1]).toEqual({ active: true, arrowDirection: "DOWN_RIGHT" });
+    expect(c1.cells[1][2]).toEqual({ active: true, arrowDirection: "RIGHT" });
+  });
+
+  it("TEST 6: Canonical T_JUNCTION Tile States (Exact 6 Predefined States 0..5)", () => {
+    const t0 = getBaseTileGeometry("T_JUNCTION", 0);
+    const t1 = getBaseTileGeometry("T_JUNCTION", 1);
+    const t2 = getBaseTileGeometry("T_JUNCTION", 2);
+    const t3 = getBaseTileGeometry("T_JUNCTION", 3);
+    const t4 = getBaseTileGeometry("T_JUNCTION", 4);
+    const t5 = getBaseTileGeometry("T_JUNCTION", 5);
+
+    expect(t0.ports).toEqual({ enter: "RIGHT", exit: "TOP" });
+    expect(t1.ports).toEqual({ enter: "LEFT", exit: "TOP" });
+    expect(t2.ports).toEqual({ enter: "LEFT", exit: "RIGHT" });
+    expect(t3.ports).toEqual({ enter: "TOP", exit: "RIGHT" });
+    expect(t4.ports).toEqual({ enter: "TOP", exit: "LEFT" });
+    expect(t5.ports).toEqual({ enter: "RIGHT", exit: "LEFT" });
+  });
+
+  it("TEST 7: Canonical CROSS / PLUS Tile States (Exact 8 Predefined States 0..7)", () => {
+    const p0 = getBaseTileGeometry("CROSS", 0);
+    const p1 = getBaseTileGeometry("CROSS", 1);
+    const p2 = getBaseTileGeometry("CROSS", 2);
+    const p3 = getBaseTileGeometry("CROSS", 3);
+    const p4 = getBaseTileGeometry("CROSS", 4);
+    const p5 = getBaseTileGeometry("CROSS", 5);
+    const p6 = getBaseTileGeometry("CROSS", 6);
+    const p7 = getBaseTileGeometry("CROSS", 7);
+
+    expect(p0.ports).toEqual({ enter: "BOTTOM", exit: "TOP" });
+    expect(p1.ports).toEqual({ enter: "LEFT", exit: "TOP" });
+    expect(p2.ports).toEqual({ enter: "LEFT", exit: "RIGHT" });
+    expect(p3.ports).toEqual({ enter: "TOP", exit: "RIGHT" });
+    expect(p4.ports).toEqual({ enter: "TOP", exit: "BOTTOM" });
+    expect(p5.ports).toEqual({ enter: "RIGHT", exit: "BOTTOM" });
+    expect(p6.ports).toEqual({ enter: "RIGHT", exit: "LEFT" });
+    expect(p7.ports).toEqual({ enter: "BOTTOM", exit: "LEFT" });
+  });
+
+  it("TEST 8 (CRITICAL): In-Place Direction Reversal on CROSS — Reverses arrows without moving cells", () => {
+    // Input:
+    // .   .   .
+    // ←   ↖   .
+    // .   ↑   .
+    const inputCells: RouteCell[][] = [
+      [{ active: false }, { active: true }, { active: false }],
+      [{ active: true, arrowDirection: "LEFT" }, { active: true, arrowDirection: "UP_LEFT" }, { active: true }],
+      [{ active: false }, { active: true, arrowDirection: "UP" }, { active: false }],
     ];
 
-    allDirections.forEach((dir) => {
-      const [deg0, deg90, deg180, deg270] = table[dir];
-      expect(rotateArrowDirection(dir, 0)).toBe(deg0);
-      expect(rotateArrowDirection(dir, 1)).toBe(deg90);
-      expect(rotateArrowDirection(dir, 2)).toBe(deg180);
-      expect(rotateArrowDirection(dir, 3)).toBe(deg270);
-      expect(rotateArrowDirection(dir, 4)).toBe(deg0);
-    });
+    const outputCells = reverseTileDirection(inputCells);
+
+    // Active coordinates MUST be unchanged:
+    expect(outputCells[0][1].active).toBe(true);
+    expect(outputCells[0][1].arrowDirection).toBeUndefined(); // null remains null
+
+    expect(outputCells[1][0].active).toBe(true);
+    expect(outputCells[1][0].arrowDirection).toBe("RIGHT"); // LEFT -> RIGHT
+
+    expect(outputCells[1][1].active).toBe(true);
+    expect(outputCells[1][1].arrowDirection).toBe("DOWN_RIGHT"); // UP_LEFT -> DOWN_RIGHT
+
+    expect(outputCells[1][2].active).toBe(true);
+    expect(outputCells[1][2].arrowDirection).toBeUndefined(); // null remains null
+
+    expect(outputCells[2][1].active).toBe(true);
+    expect(outputCells[2][1].arrowDirection).toBe("DOWN"); // UP -> DOWN
+
+    // Second reversal restores exact initial layout
+    expect(reverseTileDirection(outputCells)).toEqual(inputCells);
   });
 
-  it("TEST 4: STRAIGHT Tile Mechanics — Flip toggles arrow directions (LEFT/RIGHT) without moving active cells", () => {
-    const normalStraight = getBaseTileGeometry("STRAIGHT", false, 0);
-    const flippedStraight = getBaseTileGeometry("STRAIGHT", true, 0);
+  it("TEST 9: Rotation moves cell coordinates AND rotates arrows simultaneously", () => {
+    const baseCells = getBaseTileGeometry("CORNER", 0).cells;
 
-    expect(normalStraight.ports).toEqual({ enter: "LEFT", exit: "RIGHT" });
-    expect(flippedStraight.ports).toEqual({ enter: "RIGHT", exit: "LEFT" });
-
-    // Active cell row is row index 1 for both
-    for (let c = 0; c < 3; c++) {
-      expect(normalStraight.cells[1][c].active).toBe(true);
-      expect(normalStraight.cells[1][c].arrowDirection).toBe("RIGHT");
-      expect(flippedStraight.cells[1][c].active).toBe(true);
-      expect(flippedStraight.cells[1][c].arrowDirection).toBe("LEFT");
-    }
+    // Base CORNER: (0,1) UP, (1,1) UP_LEFT, (1,2) LEFT
+    const rot1 = rotateTile(baseCells, 90);
+    expect(rot1[1][2]).toEqual({ active: true, arrowDirection: "RIGHT" });
+    expect(rot1[1][1]).toEqual({ active: true, arrowDirection: "UP_RIGHT" });
+    expect(rot1[2][1]).toEqual({ active: true, arrowDirection: "UP" });
   });
 
-  it("TEST 5: CORNER Tile Mechanics — Flip reverses flow between LEFT->BOTTOM and BOTTOM->LEFT", () => {
-    const normalCorner = getBaseTileGeometry("CORNER", false, 0);
-    const flippedCorner = getBaseTileGeometry("CORNER", true, 0);
-
-    expect(normalCorner.ports).toEqual({ enter: "LEFT", exit: "BOTTOM" });
-    expect(flippedCorner.ports).toEqual({ enter: "BOTTOM", exit: "LEFT" });
-
-    // Both have active cells at (1,0), (1,1), (2,1)
-    expect(normalCorner.cells[1][0].active).toBe(true);
-    expect(normalCorner.cells[1][1].active).toBe(true);
-    expect(normalCorner.cells[2][1].active).toBe(true);
-
-    expect(flippedCorner.cells[1][0].active).toBe(true);
-    expect(flippedCorner.cells[1][1].active).toBe(true);
-    expect(flippedCorner.cells[2][1].active).toBe(true);
-  });
-
-  it("TEST 6: T_JUNCTION Tile Mechanics — 4 Modes cycling", () => {
-    const m0 = getBaseTileGeometry("T_JUNCTION", false, 0);
-    const m1 = getBaseTileGeometry("T_JUNCTION", false, 1);
-    const m2 = getBaseTileGeometry("T_JUNCTION", false, 2);
-    const m3 = getBaseTileGeometry("T_JUNCTION", false, 3);
-
-    expect(m0.ports).toEqual({ enter: "TOP", exit: "LEFT" });
-    expect(m1.ports).toEqual({ enter: "BOTTOM", exit: "LEFT" });
-    expect(m2.ports).toEqual({ enter: "BOTTOM", exit: "TOP" });
-    expect(m3.ports).toEqual({ enter: "LEFT", exit: "TOP" });
-  });
-
-  it("TEST 7: CROSS Tile Mechanics — 4 Modes cycling", () => {
-    const m0 = getBaseTileGeometry("CROSS", false, 0);
-    const m1 = getBaseTileGeometry("CROSS", false, 1);
-    const m2 = getBaseTileGeometry("CROSS", false, 2);
-    const m3 = getBaseTileGeometry("CROSS", false, 3);
-
-    expect(m0.ports).toEqual({ enter: "LEFT", exit: "RIGHT" });
-    expect(m1.ports).toEqual({ enter: "TOP", exit: "BOTTOM" });
-    expect(m2.ports).toEqual({ enter: "LEFT", exit: "TOP" });
-    expect(m3.ports).toEqual({ enter: "LEFT", exit: "BOTTOM" });
-  });
-
-  it("TEST 8: 4-Rotation restores exact tile geometry and arrows", () => {
-    const tile: TileDefinition = { id: "T00", gridRow: 0, gridCol: 0, type: "CORNER", cells: [] };
-    const st0: TileState = { rotation: 0, flipped: false, mode: 0 };
-    const st1: TileState = { rotation: 1, flipped: false, mode: 0 };
-    const st2: TileState = { rotation: 2, flipped: false, mode: 0 };
-    const st3: TileState = { rotation: 3, flipped: false, mode: 0 };
-
-    const c0 = getEffectiveTileCells(tile, st0);
-    const c1 = getEffectiveTileCells(tile, st1);
-    const c2 = getEffectiveTileCells(tile, st2);
-    const c3 = getEffectiveTileCells(tile, st3);
+  it("TEST 10: Four rotations restore the exact original state", () => {
+    const tile: TileDefinition = { id: "T00", gridRow: 0, gridCol: 0, type: "CROSS", cells: [] };
+    const c0 = getEffectiveTileCells(tile, { rotation: 0, mode: 0 });
+    const c1 = getEffectiveTileCells(tile, { rotation: 1, mode: 0 });
+    const c2 = getEffectiveTileCells(tile, { rotation: 2, mode: 0 });
+    const c3 = getEffectiveTileCells(tile, { rotation: 3, mode: 0 });
 
     expect(rotateTile(c0, 90)).toEqual(c1);
     expect(rotateTile(c1, 90)).toEqual(c2);
@@ -159,13 +184,23 @@ describe("Path Finder Practice Test 2 — Canonical 5-Question System Verificati
     expect(rotateTile(c3, 90)).toEqual(c0);
   });
 
-  it("TEST 9: Guaranteed Solvability & Unsolved Initial State for All 5 Questions", () => {
+  it("TEST 11: Rotation + direction change do not interfere with one another", () => {
+    const tile: TileDefinition = { id: "T00", gridRow: 0, gridCol: 0, type: "CORNER", cells: [] };
+
+    const base = getEffectiveTileCells(tile, { rotation: 0, mode: 0 });
+    const rotThenRev = reverseTileDirection(rotateTile(base, 90));
+    const revThenRot = rotateTile(reverseTileDirection(base), 90);
+
+    expect(rotThenRev).toEqual(revThenRot);
+  });
+
+  it("TEST 12: Guaranteed Solvability & Unsolved Initial State for All 5 Questions", () => {
     const questions = generatePractice2Questions(5, 777);
     const signatures = new Set<string>();
 
     expect(questions.length).toBe(5);
 
-    questions.forEach((q, idx) => {
+    questions.forEach((q) => {
       // 1. Check distinct signature
       const sig = getPuzzleSignature(q);
       expect(signatures.has(sig)).toBe(false);
@@ -188,7 +223,7 @@ describe("Path Finder Practice Test 2 — Canonical 5-Question System Verificati
     expect(signatures.size).toBe(5);
   });
 
-  it("TEST 10: Multi-Seed Stress Test — 25 Generated Questions Across 5 Seeds", () => {
+  it("TEST 13: Multi-Seed Stress Test — 25 Generated Questions Across 5 Seeds", () => {
     const seeds = [1001, 2002, 3003, 4004, 5005];
 
     seeds.forEach((seed) => {
@@ -212,9 +247,9 @@ describe("Path Finder Practice Test 2 — Canonical 5-Question System Verificati
     });
   });
 
-  it("TEST 11: Real UI Integration & Multi-Question Flow (Q1 -> Q5 -> Completed)", async () => {
+  it("TEST 14: Real UI Integration & Multi-Question Flow (Q1 -> Q5 -> Completed)", async () => {
     const React = await import("react");
-    const { render, screen, fireEvent, act } = await import("@testing-library/react");
+    const { render, screen, fireEvent } = await import("@testing-library/react");
     const { PathFinderGame } = await import("@/components/game/path-finder/PathFinderGame");
 
     render(React.createElement(PathFinderGame, { variant: "practice-2" }));
@@ -233,17 +268,23 @@ describe("Path Finder Practice Test 2 — Canonical 5-Question System Verificati
     expect(changeDirBtn).toBeDefined();
     expect(checkBtn).toBeDefined();
 
-    // Verify tile selection and rotation
+    // Verify tile selection, rotation, and direction toggle
     const tileT00 = screen.getByLabelText(/Tile T00/i);
     fireEvent.click(tileT00);
     expect(rotateBtn).toHaveProperty("disabled", false);
+    expect(changeDirBtn).toHaveProperty("disabled", false);
+
     fireEvent.click(rotateBtn);
+    fireEvent.click(changeDirBtn);
 
     // Deselect tile
     fireEvent.click(tileT00);
     expect(rotateBtn).toHaveProperty("disabled", true);
+    expect(changeDirBtn).toHaveProperty("disabled", true);
   });
 });
+
+
 
 
 

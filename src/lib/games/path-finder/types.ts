@@ -39,10 +39,11 @@ export interface TileDefinition {
 }
 
 export interface TileState {
-  rotation: 0 | 1 | 2 | 3; // 0=0°, 1=90°, 2=180°, 3=270°
+  rotation: 0 | 1 | 2 | 3; // 0=0°, 1=90°, 2=180°, 3=270° (rotateState)
   flipped?: boolean;
   directionReversed?: boolean;
-  mode?: 0 | 1 | 2 | 3;
+  mode?: number; // flipState: 0..1 for STRAIGHT/CORNER, 0..5 for T_JUNCTION, 0..7 for CROSS
+  flipState?: number; // alias for mode
 }
 
 export interface MoveOperation {
