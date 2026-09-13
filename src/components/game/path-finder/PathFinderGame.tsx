@@ -1990,122 +1990,83 @@ export function PathFinderGame({
   // ==========================================================================
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 w-full min-h-[calc(100vh-4rem)] bg-[#f8f9fa] dark:bg-slate-950">
-      <div className="flex flex-col items-center gap-5 w-full max-w-lg">
+    <div className="w-full min-h-screen flex items-start justify-center bg-white text-black select-none px-4 pt-10">
+      <div className="w-full max-w-[650px] min-h-[650px] flex flex-col border border-[#b8b8b8] rounded-[6px] overflow-hidden bg-[#f3f3f3] relative">
 
-        {/* ================================================================== */}
-        {/* BOARD + RESULT MODAL                                               */}
-        {/* ================================================================== */}
-
-        <div className="relative">
-          <PathFinderBoard
-          puzzle={
-            currentPuzzle
-          }
-          tileStates={
-            tileStates
-          }
-          selectedTileId={
-            selectedTileId
-          }
-          animatingRocket={
-            animatingRocket
-          }
-          onSelectTile={(
-            id
-          ) => {
-            if (
-              isSubmitting
-            ) {
-              return;
-            }
-
-            setSelectedTileId(
-              (previous) =>
-                previous ===
-                id
-                  ? null
-                  : id
-            );
-
-            setFeedback(
-              null
-            );
-          }}
-          />
-
-          {feedback && (
-            <div className="absolute inset-0 z-50 flex items-start justify-center pt-4 sm:pt-6">
-              <div className="w-[calc(100%-24px)] max-w-[330px] rounded-md border border-slate-300 bg-white px-6 py-5 text-center shadow-lg dark:border-slate-700 dark:bg-slate-900">
-                <div className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                  {feedback.type === "success"
-                    ? "Valid route - well done!"
-                    : "Invalid route"}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleContinue}
-                  className="mt-4 inline-flex min-w-[92px] items-center justify-center rounded-md bg-black px-4 py-2 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-slate-800 active:scale-95 dark:bg-white dark:text-black dark:hover:bg-slate-200"
-                >
-                  Continue
-                </button>
-              </div>
-            </div>
-          )}
+        {/* QUESTION HEADER */}
+        <div className="w-full h-[48px] bg-black flex items-center justify-between px-5 shrink-0">
+          <span className="text-white text-sm sm:text-base font-semibold tracking-tight">
+            Path Finder - {testTitle}
+          </span>
+          <span className="text-white text-sm sm:text-base font-semibold tracking-tight">
+            Question {currentQuestionIndex + 1} of {puzzles.length}
+          </span>
         </div>
 
-        {/* ================================================================== */}
-        {/* TIMER + CONTROLS                                                   */}
-        {/* ================================================================== */}
+        {/* GAME AREA */}
+        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 py-8">
 
-        <div className="flex flex-col items-center gap-3 pt-2">
+          {/* BOARD + RESULT MODAL */}
+          <div className="relative shrink-0">
+            <PathFinderBoard
+              puzzle={currentPuzzle}
+              tileStates={tileStates}
+              selectedTileId={selectedTileId}
+              animatingRocket={animatingRocket}
+              onSelectTile={(id) => {
+                if (isSubmitting) return;
 
-          <div className="flex items-center justify-center gap-6 sm:gap-8">
+                setSelectedTileId((previous) =>
+                  previous === id ? null : id
+                );
 
-            <PathFinderTimer
-              timeRemaining={
-                timeRemaining
-              }
-              totalTime={
-                240
-              }
-              onTimeout={() =>
-                setStage(
-                  "TIMEOUT"
-                )
-              }
-              isRunning={
-                stage ===
-                  "PLAYING" &&
-                !isSubmitting
-              }
+                setFeedback(null);
+              }}
             />
 
-            <PathFinderControls
-              onRotate={
-                handleRotate
-              }
-              onChangeDirection={
-                handleChangeDirection
-              }
-              onCheck={
-                handleCheck
-              }
-              hasSelection={
-                selectedTileId !==
-                null
-              }
-              disabled={
-                isSubmitting
-              }
-            />
+            {feedback && (
+              <div className="absolute inset-0 z-50 flex items-start justify-center pt-4">
+                <div className="w-[calc(100%-24px)] max-w-[330px] rounded-md border border-slate-300 bg-white px-6 py-5 text-center shadow-lg">
+                  <div className="text-sm font-medium text-slate-700">
+                    {feedback.type === "success"
+                      ? "Valid route - well done!"
+                      : "Invalid route"}
+                  </div>
 
+                  <button
+                    type="button"
+                    onClick={handleContinue}
+                    className="mt-4 inline-flex min-w-[92px] items-center justify-center rounded-md bg-black px-4 py-2 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-slate-800 active:scale-95"
+                  >
+                    Continue
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="text-xs font-medium text-slate-500 dark:text-slate-400 select-none">
-            Moves:{" "}
-            {moves}
+          {/* TIMER + CONTROLS */}
+          <div className="flex flex-col items-center gap-3 pt-6">
+            <div className="flex items-center justify-center gap-6 sm:gap-8">
+              <PathFinderTimer
+                timeRemaining={timeRemaining}
+                totalTime={240}
+                onTimeout={() => setStage("TIMEOUT")}
+                isRunning={stage === "PLAYING" && !isSubmitting}
+              />
+
+              <PathFinderControls
+                onRotate={handleRotate}
+                onChangeDirection={handleChangeDirection}
+                onCheck={handleCheck}
+                hasSelection={selectedTileId !== null}
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div className="text-xs font-medium text-slate-500 select-none">
+              Moves: {moves}
+            </div>
           </div>
 
         </div>

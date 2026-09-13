@@ -19,7 +19,7 @@ export function PathFinderInstructions({
   onNext,
 }: PathFinderInstructionsProps) {
   return (
-    <div className="flex w-full flex-col items-center justify-center py-6 px-4">
+    <div className="flex w-full flex-col items-center justify-center translate-y-8 py-6 px-4">
       <Card className="w-full max-w-2xl border bg-card text-card-foreground shadow-md rounded-2xl overflow-hidden">
 
         {/* Header */}
