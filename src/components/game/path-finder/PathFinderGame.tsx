@@ -1,331 +1,640 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
+
 import { useRouter } from "next/navigation";
+
 import { PathFinderInstructions } from "./PathFinderInstructions";
 import { PathFinderBoard } from "./PathFinderBoard";
 import { PathFinderControls } from "./PathFinderControls";
 import { PathFinderTimer } from "./PathFinderTimer";
+
 import {
   PRACTICE_TEST_1_PUZZLES,
 } from "@/lib/games/path-finder/practice-1-puzzle";
+
 import {
-  PRACTICE_TEST_2_PUZZLES,
   generatePractice2Questions,
 } from "@/lib/games/path-finder/practice-2-puzzle";
+
 import {
   PuzzleDefinition,
   TileState,
 } from "@/lib/games/path-finder/types";
-import { validateRoute } from "@/lib/games/path-finder/validator";
+
+import {
+  validateRoute,
+} from "@/lib/games/path-finder/validator";
+
 import {
   getEffectiveTileCells,
   normalizeRotation,
   getTileFlipState,
   SHAPE_FLIP_STATES_COUNT,
 } from "@/lib/games/path-finder/transformations";
+
 import { Button } from "@/components/ui/button";
+
 import {
   Card,
   CardHeader,
   CardTitle,
   CardContent,
 } from "@/components/ui/card";
+
 import {
   CheckCircle2,
   AlertCircle,
 } from "lucide-react";
 
+// ============================================================================
+// PROPS
+// ============================================================================
+
 interface PathFinderGameProps {
   variant?: string;
 }
 
-function getHeadingAngle(
-  from: { r: number; c: number },
-  to: { r: number; c: number }
-): number {
-  const dr = to.r - from.r;
-  const dc = to.c - from.c;
+// ============================================================================
+// CONSTANTS
+// ============================================================================
 
-  if (dr === 0 && dc === 1) return 0;
-  if (dr === 1 && dc === 1) return 45;
-  if (dr === 1 && dc === 0) return 90;
-  if (dr === 1 && dc === -1) return 135;
-  if (dr === 0 && dc === -1) return 180;
-  if (dr === -1 && dc === -1) return 225;
-  if (dr === -1 && dc === 0) return 270;
-  if (dr === -1 && dc === 1) return 315;
+const BOARD_SIZE = 378;
+const CELL_SIZE = 42;
+const CELL_CENTER = 21;
 
-  return 0;
+// Time for the rocket to move from one cell center to the next.
+const ROCKET_SEGMENT_DURATION = 180;
+
+// ============================================================================
+// CELL -> PIXEL
+// ============================================================================
+//
+// IMPORTANT:
+//
+// The coordinate represents the CENTER of the cell.
+//
+// Cell 0:
+//
+//     0 -------- 42
+//          21
+//
+// Therefore:
+//
+//     x = column * 42 + 21
+//     y = row    * 42 + 21
+//
+// ============================================================================
+
+function cellToPixel(
+  cell: {
+    r: number;
+    c: number;
+  }
+) {
+  return {
+    x:
+      cell.c *
+        CELL_SIZE +
+      CELL_CENTER,
+
+    y:
+      cell.r *
+        CELL_SIZE +
+      CELL_CENTER,
+  };
 }
+
+// ============================================================================
+// START ROCKET POSITION
+// ============================================================================
+//
+// The existing large rocket starts outside the LEFT side of the board.
+//
+// Its center is horizontally aligned with the starting row center.
+//
+// ============================================================================
+
+function getStartRocketPosition(
+  row: number
+) {
+  return {
+    x: -CELL_CENTER,
+
+    y:
+      row *
+        CELL_SIZE +
+      CELL_CENTER,
+  };
+}
+
+// ============================================================================
+// EASING
+// ============================================================================
+
+function easeInOut(
+  progress: number
+): number {
+  if (
+    progress < 0.5
+  ) {
+    return (
+      2 *
+      progress *
+      progress
+    );
+  }
+
+  return (
+    1 -
+    Math.pow(
+      -2 *
+        progress +
+        2,
+      2
+    ) /
+      2
+  );
+}
+
+// ============================================================================
+// SHORTEST ROTATION
+// ============================================================================
+//
+// Keeps the rocket from doing a 270° reverse spin.
+//
+// Example:
+//
+//     180° -> 270°
+//
+// becomes:
+//
+//     +90°
+//
+// rather than:
+//
+//     -270°
+//
+// ============================================================================
+
+function getShortestTurn(
+  currentAngle: number,
+  targetAngle: number
+): number {
+  let delta =
+    targetAngle -
+    currentAngle;
+
+  while (
+    delta > 180
+  ) {
+    delta -= 360;
+  }
+
+  while (
+    delta < -180
+  ) {
+    delta += 360;
+  }
+
+  return (
+    currentAngle +
+    delta
+  );
+}
+
+// ============================================================================
+// MAIN GAME
+// ============================================================================
 
 export function PathFinderGame({
   variant = "practice-1",
 }: PathFinderGameProps) {
-  const router = useRouter();
+  const router =
+    useRouter();
 
-  // ============================================================================
-  // PUZZLE DATA
-  // ============================================================================
+  // ==========================================================================
+  // PUZZLES
+  // ==========================================================================
 
-  // For Practice Test 2, generate 5 random guaranteed-solvable questions per session.
-  // Practice Test 1 continues to use the fixed puzzle set.
-  const puzzles: PuzzleDefinition[] = useMemo(() => {
-    if (variant === "practice-2") {
-      return generatePractice2Questions(5);
-    }
+  const puzzles:
+    PuzzleDefinition[] =
+    useMemo(() => {
+      if (
+        variant ===
+        "practice-2"
+      ) {
+        return generatePractice2Questions(
+          5
+        );
+      }
 
-    return PRACTICE_TEST_1_PUZZLES;
-  }, [variant]);
+      return PRACTICE_TEST_1_PUZZLES;
+    }, [variant]);
 
   const testTitle =
-    variant === "practice-2"
+    variant ===
+    "practice-2"
       ? "Practice Test 2"
       : "Practice Test 1";
 
-  // ============================================================================
+  // ==========================================================================
   // GAME STATE
-  // ============================================================================
+  // ==========================================================================
 
-  const [stage, setStage] = useState<
-    "INSTRUCTIONS" | "PLAYING" | "COMPLETED" | "TIMEOUT"
+  const [
+    stage,
+    setStage,
+  ] = useState<
+    | "INSTRUCTIONS"
+    | "PLAYING"
+    | "COMPLETED"
+    | "TIMEOUT"
   >("INSTRUCTIONS");
 
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [
+    currentQuestionIndex,
+    setCurrentQuestionIndex,
+  ] = useState(0);
 
   const currentPuzzle =
-    puzzles[currentQuestionIndex] || puzzles[0];
+    puzzles[
+      currentQuestionIndex
+    ] ||
+    puzzles[0];
 
-  const [tileStates, setTileStates] = useState<
-    Record<string, TileState>
-  >({
-    ...currentPuzzle.initialTileStates,
-  });
+  const [
+    tileStates,
+    setTileStates,
+  ] =
+    useState<
+      Record<
+        string,
+        TileState
+      >
+    >({
+      ...currentPuzzle.initialTileStates,
+    });
 
-  const [selectedTileId, setSelectedTileId] =
-    useState<string | null>(null);
+  const [
+    selectedTileId,
+    setSelectedTileId,
+  ] =
+    useState<
+      string | null
+    >(null);
 
-  const [moves, setMoves] = useState(0);
+  const [
+    moves,
+    setMoves,
+  ] = useState(0);
 
-  const [totalMoves, setTotalMoves] = useState(0);
+  const [
+    totalMoves,
+    setTotalMoves,
+  ] = useState(0);
 
-  const [timeRemaining, setTimeRemaining] = useState(240);
+  const [
+    timeRemaining,
+    setTimeRemaining,
+  ] = useState(240);
 
-  const [feedback, setFeedback] = useState<{
-    type: "success" | "error";
-    message: string;
-  } | null>(null);
+  const [
+    feedback,
+    setFeedback,
+  ] =
+    useState<{
+      type:
+        | "success"
+        | "error";
 
-  // ============================================================================
-  // ROCKET ANIMATION STATE
-  // ============================================================================
+      message: string;
+    } | null>(null);
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // ==========================================================================
+  // ROCKET
+  // ==========================================================================
 
-  const [animatingRocket, setAnimatingRocket] =
+  const [
+    isSubmitting,
+    setIsSubmitting,
+  ] = useState(false);
+
+  const [
+    animatingRocket,
+    setAnimatingRocket,
+  ] =
     useState<{
       x: number;
       y: number;
       angle: number;
     } | null>(null);
 
-  // ============================================================================
+  const animationFrameRef =
+    useRef<
+      number | null
+    >(null);
+
+  const animationTimeoutRef =
+    useRef<
+      ReturnType<
+        typeof setTimeout
+      > | null
+    >(null);
+
+  // ==========================================================================
+  // ANIMATION CLEANUP
+  // ==========================================================================
+
+  const stopRocketAnimation =
+    useCallback(() => {
+      if (
+        animationFrameRef.current !==
+        null
+      ) {
+        cancelAnimationFrame(
+          animationFrameRef.current
+        );
+
+        animationFrameRef.current =
+          null;
+      }
+
+      if (
+        animationTimeoutRef.current !==
+        null
+      ) {
+        clearTimeout(
+          animationTimeoutRef.current
+        );
+
+        animationTimeoutRef.current =
+          null;
+      }
+    }, []);
+
+  // ==========================================================================
   // LOAD QUESTION
-  // ============================================================================
+  // ==========================================================================
 
-  const loadQuestion = useCallback(
-    (index: number) => {
-      const puzzle = puzzles[index] || puzzles[0];
+  const loadQuestion =
+    useCallback(
+      (
+        index: number
+      ) => {
+        stopRocketAnimation();
 
-      console.log(
-        `[PATHFINDER] Loaded Question ${index + 1}/${puzzles.length}: ${puzzle.id}`
-      );
+        const puzzle =
+          puzzles[index] ||
+          puzzles[0];
 
-      console.log(
-        `[PATHFINDER] Start: (${puzzle.startPos.row}, ${puzzle.startPos.col}), Destination: (${puzzle.destinationPos.row}, ${puzzle.destinationPos.col})`
-      );
+        console.log(
+          `[PATHFINDER] Loaded Question ${
+            index + 1
+          }/${puzzles.length}: ${
+            puzzle.id
+          }`
+        );
 
-      setCurrentQuestionIndex(index);
+        console.log(
+          `[PATHFINDER] Start: (${
+            puzzle.startPos.row
+          }, ${
+            puzzle.startPos.col
+          })`
+        );
 
-      setTileStates({
-        ...puzzle.initialTileStates,
-      });
+        console.log(
+          `[PATHFINDER] Destination: (${
+            puzzle.destinationPos.row
+          }, ${
+            puzzle.destinationPos.col
+          })`
+        );
 
-      setSelectedTileId(null);
+        setCurrentQuestionIndex(
+          index
+        );
 
-      setMoves(0);
+        setTileStates({
+          ...puzzle.initialTileStates,
+        });
 
-      setTimeRemaining(240);
+        setSelectedTileId(
+          null
+        );
 
-      setFeedback(null);
+        setMoves(0);
 
-      setIsSubmitting(false);
+        setTimeRemaining(
+          240
+        );
 
-      setAnimatingRocket(null);
-    },
-    [puzzles]
-  );
+        setFeedback(null);
 
-  // ============================================================================
+        setIsSubmitting(
+          false
+        );
+
+        setAnimatingRocket(
+          null
+        );
+      },
+      [
+        puzzles,
+        stopRocketAnimation,
+      ]
+    );
+
+  // ==========================================================================
   // START GAME
-  // ============================================================================
+  // ==========================================================================
 
-  const handleStartGame = () => {
-    setTotalMoves(0);
+  const handleStartGame =
+    useCallback(() => {
+      setTotalMoves(0);
 
-    loadQuestion(0);
+      loadQuestion(0);
 
-    setStage("PLAYING");
-  };
+      setStage(
+        "PLAYING"
+      );
+    }, [
+      loadQuestion,
+    ]);
 
-  // ============================================================================
+  // ==========================================================================
   // TIMER
-  // ============================================================================
+  // ==========================================================================
 
-  // Timer countdown:
-  // - Runs only while PLAYING.
-  // - Pauses while the success rocket animation is running.
-  // - Decrements once per second.
   useEffect(() => {
-    if (stage !== "PLAYING" || isSubmitting) {
-      return;
-    }
-
-    const interval = setInterval(() => {
-      setTimeRemaining((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-
-          setStage("TIMEOUT");
-
-          return 0;
-        }
-
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [stage, isSubmitting]);
-
-  // ============================================================================
-  // BUTTON 1 — ROTATE SELECTED TILE
-  // ============================================================================
-
-  // Rotates the selected tile 90° clockwise.
-  //
-  // Rotation is PHYSICAL rotation:
-  // - Cell positions rotate.
-  // - Arrow directions rotate with the cells.
-  //
-  // Sequence:
-  // 0° -> 90° -> 180° -> 270° -> 0°
-  const handleRotate = useCallback(() => {
     if (
-      !selectedTileId ||
+      stage !==
+        "PLAYING" ||
       isSubmitting
     ) {
       return;
     }
 
-    const tileDef = currentPuzzle.tiles.find(
-      (t) => t.id === selectedTileId
-    );
+    const interval =
+      setInterval(() => {
+        setTimeRemaining(
+          (previous) => {
+            if (
+              previous <= 1
+            ) {
+              clearInterval(
+                interval
+              );
 
-    const beforeState =
-      tileStates[selectedTileId] || {
-        rotation: 0,
-        flipped: false,
-        mode: 0,
-      };
+              setStage(
+                "TIMEOUT"
+              );
 
-    const beforeCells = tileDef
-      ? getEffectiveTileCells(tileDef, beforeState)
-      : [];
+              return 0;
+            }
 
-    const curNormRot = normalizeRotation(
-      beforeState.rotation
-    );
+            return (
+              previous - 1
+            );
+          }
+        );
+      }, 1000);
 
-    const nextRotation =
-      (((curNormRot + 1) % 4) as 0 | 1 | 2 | 3);
-
-    const afterState: TileState = {
-      ...beforeState,
-      rotation: nextRotation,
-    };
-
-    const afterCells = tileDef
-      ? getEffectiveTileCells(tileDef, afterState)
-      : [];
-
-    console.log(
-      `[PATHFINDER] Button 1 (ROTATE) on block: ${selectedTileId}`
-    );
-
-    console.log("Before State:", beforeState);
-
-    if (tileDef) {
-      console.log(
-        "Before Cells (active/arrows):",
-        beforeCells.flatMap((row, r) =>
-          row
-            .map((c, col) =>
-              c.active
-                ? `R${r + 1}C${col + 1}=${
-                    c.arrowDirection || "NO_ARROW"
-                  }`
-                : null
-            )
-            .filter(Boolean)
-        )
+    return () =>
+      clearInterval(
+        interval
       );
-    }
-
-    console.log("After State:", afterState);
-
-    if (tileDef) {
-      console.log(
-        "After Cells (active/arrows):",
-        afterCells.flatMap((row, r) =>
-          row
-            .map((c, col) =>
-              c.active
-                ? `R${r + 1}C${col + 1}=${
-                    c.arrowDirection || "NO_ARROW"
-                  }`
-                : null
-            )
-            .filter(Boolean)
-        )
-      );
-    }
-
-    setTileStates((prev) => ({
-      ...prev,
-      [selectedTileId]: afterState,
-    }));
-
-    setMoves((m) => m + 1);
-
-    setTotalMoves((tm) => tm + 1);
-
-    setFeedback(null);
   }, [
-    selectedTileId,
+    stage,
     isSubmitting,
-    currentPuzzle.tiles,
-    tileStates,
   ]);
 
-  // ============================================================================
-  // BUTTON 2 — CHANGE ROUTE DIRECTION / CANONICAL FLIP STATE
-  // ============================================================================
+  // ==========================================================================
+  // CLEANUP
+  // ==========================================================================
 
+  useEffect(() => {
+    return () => {
+      stopRocketAnimation();
+    };
+  }, [
+    stopRocketAnimation,
+  ]);
+
+  // ==========================================================================
+  // BUTTON 1 — ROTATE
+  // ==========================================================================
+
+  const handleRotate =
+    useCallback(() => {
+      if (
+        !selectedTileId ||
+        isSubmitting
+      ) {
+        return;
+      }
+
+      const tileDef =
+        currentPuzzle.tiles.find(
+          (tile) =>
+            tile.id ===
+            selectedTileId
+        );
+
+      const beforeState =
+        tileStates[
+          selectedTileId
+        ] || {
+          rotation: 0,
+          flipped: false,
+          mode: 0,
+        };
+
+      const currentRotation =
+        normalizeRotation(
+          beforeState.rotation
+        );
+
+      const nextRotation =
+        (((currentRotation +
+          1) %
+          4) as
+          | 0
+          | 1
+          | 2
+          | 3);
+
+      const afterState:
+        TileState = {
+        ...beforeState,
+
+        rotation:
+          nextRotation,
+      };
+
+      console.log(
+        `[PATHFINDER] ROTATE: ${selectedTileId}`
+      );
+
+      if (tileDef) {
+        console.log(
+          "[PATHFINDER] Before:",
+          getEffectiveTileCells(
+            tileDef,
+            beforeState
+          )
+        );
+
+        console.log(
+          "[PATHFINDER] After:",
+          getEffectiveTileCells(
+            tileDef,
+            afterState
+          )
+        );
+      }
+
+      setTileStates(
+        (previous) => ({
+          ...previous,
+
+          [selectedTileId]:
+            afterState,
+        })
+      );
+
+      setMoves(
+        (value) =>
+          value + 1
+      );
+
+      setTotalMoves(
+        (value) =>
+          value + 1
+      );
+
+      setFeedback(null);
+    }, [
+      selectedTileId,
+      isSubmitting,
+      currentPuzzle.tiles,
+      tileStates,
+    ]);
+
+  // ==========================================================================
+  // BUTTON 2 — CHANGE ROUTE DIRECTION
+  // ==========================================================================
+  //
   // IMPORTANT:
   //
-  // This button cycles through the CANONICAL states defined in
-  // transformations.ts.
+  // The button cycles canonical states.
   //
   // STRAIGHT:
   //   0 -> 1 -> 0
@@ -336,264 +645,613 @@ export function PathFinderGame({
   // T-JUNCTION:
   //   0 -> 1 -> 2 -> 3 -> 4 -> 5 -> 0
   //
-  // CROSS / PLUS:
-  //   0 -> 1 -> 2 -> ... -> 11 -> 0
+  // CROSS:
+  //   0 -> 1 -> ... -> 11 -> 0
   //
-  // DO NOT derive directionReversed from flipState.
+  // Do NOT derive directionReversed from flipState.
   //
-  // Previously this code did:
-  //
-  //   directionReversed: nextFlip % 2 === 1
-  //
-  // That caused the transformation layer to reverse odd-numbered
-  // canonical states again. For T-JUNCTION this effectively collapsed
-  // the six canonical states into three visible states.
-  //
-  // flipState and directionReversed are independent concepts.
-  const handleChangeDirection = useCallback(() => {
-    if (
-      !selectedTileId ||
-      isSubmitting
-    ) {
-      return;
-    }
+  // ==========================================================================
 
-    const tileDef = currentPuzzle.tiles.find(
-      (t) => t.id === selectedTileId
-    );
+  const handleChangeDirection =
+    useCallback(() => {
+      if (
+        !selectedTileId ||
+        isSubmitting
+      ) {
+        return;
+      }
 
-    const beforeState =
-      tileStates[selectedTileId] || {
-        rotation: 0,
-        flipped: false,
-        mode: 0,
+      const tileDef =
+        currentPuzzle.tiles.find(
+          (tile) =>
+            tile.id ===
+            selectedTileId
+        );
+
+      const beforeState =
+        tileStates[
+          selectedTileId
+        ] || {
+          rotation: 0,
+          flipped: false,
+          mode: 0,
+        };
+
+      const type =
+        tileDef?.type ||
+        "STRAIGHT";
+
+      const max =
+        SHAPE_FLIP_STATES_COUNT[
+          type
+        ] || 2;
+
+      const currentFlip =
+        getTileFlipState(
+          type,
+          beforeState
+        );
+
+      const nextFlip =
+        (currentFlip + 1) %
+        max;
+
+      const afterState:
+        TileState = {
+        ...beforeState,
+
+        flipState:
+          nextFlip,
+
+        mode:
+          nextFlip,
       };
 
-    const beforeCells = tileDef
-      ? getEffectiveTileCells(tileDef, beforeState)
-      : [];
-
-    const type = tileDef?.type || "STRAIGHT";
-
-    // Get the number of canonical states for this tile type.
-    //
-    // STRAIGHT   = 2
-    // CORNER     = 2
-    // T_JUNCTION = 6
-    // CROSS      = 12
-    const max =
-      SHAPE_FLIP_STATES_COUNT[type] || 2;
-
-    const currentFlip =
-      getTileFlipState(type, beforeState);
-
-    const nextFlip =
-      (currentFlip + 1) % max;
-
-    // IMPORTANT:
-    // Only update the canonical flip state here.
-    //
-    // Do NOT set:
-    //   flipped: nextFlip % 2 === 1
-    //   directionReversed: nextFlip % 2 === 1
-    //
-    // Those values must not be derived from the canonical state.
-    const afterState: TileState = {
-      ...beforeState,
-
-      flipState: nextFlip,
-
-      mode: nextFlip,
-    };
-
-    const afterCells = tileDef
-      ? getEffectiveTileCells(tileDef, afterState)
-      : [];
-
-    console.log(
-      `[PATHFINDER] Button 2 (CHANGE ROUTE DIRECTION) on block: ${selectedTileId}`
-    );
-
-    console.log(
-      `[PATHFINDER] Tile Type: ${type}`
-    );
-
-    console.log(
-      `[PATHFINDER] Canonical State: ${currentFlip} -> ${nextFlip} / ${max}`
-    );
-
-    console.log("Before State:", beforeState);
-
-    if (tileDef) {
       console.log(
-        "Before Cells (active/arrows):",
-        beforeCells.flatMap((row, r) =>
-          row
-            .map((c, col) =>
-              c.active
-                ? `R${r + 1}C${col + 1}=${
-                    c.arrowDirection || "NO_ARROW"
-                  }`
-                : null
-            )
-            .filter(Boolean)
-        )
+        `[PATHFINDER] CHANGE DIRECTION: ${selectedTileId}`
       );
-    }
 
-    console.log("After State:", afterState);
-
-    if (tileDef) {
       console.log(
-        "After Cells (active/arrows):",
-        afterCells.flatMap((row, r) =>
-          row
-            .map((c, col) =>
-              c.active
-                ? `R${r + 1}C${col + 1}=${
-                    c.arrowDirection || "NO_ARROW"
-                  }`
-                : null
-            )
-            .filter(Boolean)
-        )
+        `[PATHFINDER] ${type}: ${currentFlip} -> ${nextFlip}`
       );
-    }
 
-    setTileStates((prev) => ({
-      ...prev,
-      [selectedTileId]: afterState,
-    }));
+      setTileStates(
+        (previous) => ({
+          ...previous,
 
-    setMoves((m) => m + 1);
+          [selectedTileId]:
+            afterState,
+        })
+      );
 
-    setTotalMoves((tm) => tm + 1);
+      setMoves(
+        (value) =>
+          value + 1
+      );
 
-    setFeedback(null);
-  }, [
-    selectedTileId,
-    isSubmitting,
-    currentPuzzle.tiles,
-    tileStates,
-  ]);
+      setTotalMoves(
+        (value) =>
+          value + 1
+      );
 
-  // ============================================================================
-  // BUTTON 3 — CHECK PATH
-  // ============================================================================
+      setFeedback(null);
+    }, [
+      selectedTileId,
+      isSubmitting,
+      currentPuzzle.tiles,
+      tileStates,
+    ]);
 
-  // Checking does NOT increment moves.
-  const handleCheck = useCallback(() => {
-    if (isSubmitting) {
-      return;
-    }
+  // ==========================================================================
+  // BUTTON 3 — CHECK
+  // ==========================================================================
+  //
+  // The validator now returns the ACTUAL visual traversal path:
+  //
+  //     ENTER
+  //       ↓
+  //     CENTER
+  //       ↓
+  //      EXIT
+  //
+  // Therefore we animate result.visitedPath directly.
+  //
+  // ==========================================================================
 
-    const result = validateRoute(
-      currentPuzzle,
-      tileStates
-    );
+  const handleCheck =
+    useCallback(() => {
+      if (
+        isSubmitting
+      ) {
+        return;
+      }
 
-    if (
-      result.isValid &&
-      result.visitedPath.length > 0
-    ) {
-      setIsSubmitting(true);
+      console.log(
+        "[PATHFINDER] CHECK clicked"
+      );
 
-      setSelectedTileId(null);
+      stopRocketAnimation();
 
-      // Rocket animation cell-by-cell.
-      const path = result.visitedPath;
+      // ------------------------------------------------------------------------
+      // VALIDATE
+      // ------------------------------------------------------------------------
 
-      let stepIndex = 0;
+      let validationResult:
+        ReturnType<
+          typeof validateRoute
+        >;
 
-      const animateStep = () => {
-        if (stepIndex >= path.length) {
-          // Rocket reached destination.
-          setFeedback({
-            type: "success",
-            message: "Correct! Path connected.",
-          });
+      try {
+        validationResult =
+          validateRoute(
+            currentPuzzle,
+            tileStates
+          );
 
-          setTimeout(() => {
-            if (
-              currentQuestionIndex + 1 <
-              puzzles.length
-            ) {
-              loadQuestion(
-                currentQuestionIndex + 1
-              );
-            } else {
-              setStage("COMPLETED");
-            }
-          }, 800);
+        console.log(
+          "[PATHFINDER] Validation:",
+          validationResult
+        );
+      } catch (
+        error
+      ) {
+        console.error(
+          "[PATHFINDER] Validator error:",
+          error
+        );
 
-          return;
-        }
-
-        const currentCell =
-          path[stepIndex];
-
-        const nextCell =
-          stepIndex + 1 < path.length
-            ? path[stepIndex + 1]
-            : path[stepIndex];
-
-        const angle =
-          stepIndex + 1 < path.length
-            ? getHeadingAngle(
-                currentCell,
-                nextCell
-              )
-            : 0;
-
-        setAnimatingRocket({
-          x: currentCell.c * 42 + 21,
-          y: currentCell.r * 42 + 21,
-          angle,
+        setFeedback({
+          type: "error",
+          message:
+            "Invalid Route",
         });
 
-        stepIndex++;
+        return;
+      }
 
-        setTimeout(animateStep, 90);
-      };
+      // ------------------------------------------------------------------------
+      // INVALID
+      // ------------------------------------------------------------------------
 
-      animateStep();
-    } else {
-      setFeedback({
-        type: "error",
-        message:
-          "Path is not connected. Keep trying!",
-      });
+      if (
+        !validationResult.isValid
+      ) {
+        console.log(
+          "[PATHFINDER] INVALID ROUTE"
+        );
 
-      setTimeout(() => {
-        setFeedback(null);
-      }, 2000);
-    }
-  }, [
-    currentPuzzle,
-    tileStates,
-    currentQuestionIndex,
-    loadQuestion,
-    puzzles.length,
-    isSubmitting,
-  ]);
+        setFeedback({
+          type: "error",
+          message:
+            "Invalid Route",
+        });
 
-  // ============================================================================
+        return;
+      }
+
+      const path =
+        validationResult.visitedPath;
+
+      console.log(
+        "[PATHFINDER] REAL VISUAL PATH:",
+        path
+      );
+
+      if (
+        path.length === 0
+      ) {
+        console.error(
+          "[PATHFINDER] Valid route returned an empty path."
+        );
+
+        setFeedback({
+          type: "error",
+          message:
+            "Invalid Route",
+        });
+
+        return;
+      }
+
+      // ------------------------------------------------------------------------
+      // START ANIMATION
+      // ------------------------------------------------------------------------
+
+      setIsSubmitting(
+        true
+      );
+
+      setSelectedTileId(
+        null
+      );
+
+      // ------------------------------------------------------------------------
+      // ANIMATION POINTS
+      // ------------------------------------------------------------------------
+      //
+      // Start:
+      //
+      //     Existing large rocket outside left side
+      //
+      // Then:
+      //
+      //     tile entry center
+      //     tile center
+      //     tile exit center
+      //     next tile entry center
+      //     ...
+      //
+      // Finally:
+      //
+      //     final tile exit center
+      //
+      // ------------------------------------------------------------------------
+
+      const startPosition =
+        getStartRocketPosition(
+          currentPuzzle.startPos
+            .row
+        );
+
+      const animationPoints = [
+        startPosition,
+
+        ...path.map(
+          cellToPixel
+        ),
+      ];
+
+      console.log(
+        "[PATHFINDER] Animation points:",
+        animationPoints
+      );
+
+      // ------------------------------------------------------------------------
+      // PRE-COMPUTE HEADINGS
+      // ------------------------------------------------------------------------
+
+      const headings =
+        animationPoints.map(
+          (
+            point,
+            index
+          ) => {
+            if (
+              index ===
+              0
+            ) {
+              return 0;
+            }
+
+            const previous =
+              animationPoints[
+                index - 1
+              ];
+
+            const dx =
+              point.x -
+              previous.x;
+
+            const dy =
+              point.y -
+              previous.y;
+
+            if (
+              Math.abs(dx) >
+                0 &&
+              Math.abs(dy) <
+                0.01
+            ) {
+              return dx >=
+                0
+                ? 0
+                : 180;
+            }
+
+            if (
+              Math.abs(dy) >
+                0 &&
+              Math.abs(dx) <
+                0.01
+            ) {
+              return dy >=
+                0
+                ? 90
+                : 270;
+            }
+
+            if (
+              dx > 0 &&
+              dy > 0
+            ) {
+              return 45;
+            }
+
+            if (
+              dx < 0 &&
+              dy > 0
+            ) {
+              return 135;
+            }
+
+            if (
+              dx < 0 &&
+              dy < 0
+            ) {
+              return 225;
+            }
+
+            if (
+              dx > 0 &&
+              dy < 0
+            ) {
+              return 315;
+            }
+
+            return 0;
+          }
+        );
+
+      // ------------------------------------------------------------------------
+      // ROCKET ANIMATION
+      // ------------------------------------------------------------------------
+
+      let segmentIndex = 0;
+
+      let segmentStartTime:
+        | number
+        | null = null;
+
+      let currentAngle =
+        headings[0] ??
+        0;
+
+      const animate =
+        (
+          timestamp: number
+        ) => {
+          // --------------------------------------------------------------------
+          // FINISHED
+          // --------------------------------------------------------------------
+
+          if (
+            segmentIndex >=
+            animationPoints.length -
+              1
+          ) {
+            const finalPoint =
+              animationPoints[
+                animationPoints.length -
+                  1
+              ];
+
+            const finalAngle =
+              currentAngle;
+
+            setAnimatingRocket(
+              {
+                x: finalPoint.x,
+                y: finalPoint.y,
+                angle:
+                  finalAngle,
+              }
+            );
+
+            setFeedback({
+              type: "success",
+              message:
+                "Valid Route",
+            });
+
+            animationTimeoutRef.current =
+              setTimeout(() => {
+                setAnimatingRocket(
+                  null
+                );
+
+                if (
+                  currentQuestionIndex +
+                    1 <
+                  puzzles.length
+                ) {
+                  loadQuestion(
+                    currentQuestionIndex +
+                      1
+                  );
+
+                  return;
+                }
+
+                setStage(
+                  "COMPLETED"
+                );
+
+                setIsSubmitting(
+                  false
+                );
+              }, 1000);
+
+            return;
+          }
+
+          // --------------------------------------------------------------------
+          // Start segment timer.
+          // --------------------------------------------------------------------
+
+          if (
+            segmentStartTime ===
+            null
+          ) {
+            segmentStartTime =
+              timestamp;
+          }
+
+          const elapsed =
+            timestamp -
+            segmentStartTime;
+
+          const progress =
+            Math.min(
+              elapsed /
+                ROCKET_SEGMENT_DURATION,
+              1
+            );
+
+          const eased =
+            easeInOut(
+              progress
+            );
+
+          const from =
+            animationPoints[
+              segmentIndex
+            ];
+
+          const to =
+            animationPoints[
+              segmentIndex + 1
+            ];
+
+          const x =
+            from.x +
+            (to.x -
+              from.x) *
+              eased;
+
+          const y =
+            from.y +
+            (to.y -
+              from.y) *
+              eased;
+
+          // --------------------------------------------------------------------
+          // TURN ROCKET AT CORNERS
+          // --------------------------------------------------------------------
+          //
+          // We calculate the desired direction for the CURRENT segment.
+          //
+          // At:
+          //
+          //     RIGHT -> DOWN
+          //
+          // the rocket smoothly turns:
+          //
+          //     0° -> 90°
+          //
+          // At:
+          //
+          //     DOWN -> LEFT
+          //
+          // it turns:
+          //
+          //     90° -> 180°
+          //
+          // using the shortest angular path.
+          // --------------------------------------------------------------------
+
+          const targetAngle =
+            headings[
+              segmentIndex + 1
+            ] ??
+            currentAngle;
+
+          const targetContinuousAngle =
+            getShortestTurn(
+              currentAngle,
+              targetAngle
+            );
+
+          currentAngle =
+            currentAngle +
+            (
+              targetContinuousAngle -
+              currentAngle
+            ) *
+              0.18;
+
+          // Snap very close values.
+          if (
+            Math.abs(
+              targetContinuousAngle -
+                currentAngle
+            ) <
+            0.5
+          ) {
+            currentAngle =
+              targetContinuousAngle;
+          }
+
+          setAnimatingRocket(
+            {
+              x,
+              y,
+              angle:
+                currentAngle,
+            }
+          );
+
+          // --------------------------------------------------------------------
+          // SEGMENT COMPLETE
+          // --------------------------------------------------------------------
+
+          if (
+            progress >= 1
+          ) {
+            currentAngle =
+              targetAngle;
+
+            segmentIndex +=
+              1;
+
+            segmentStartTime =
+              null;
+          }
+
+          animationFrameRef.current =
+            requestAnimationFrame(
+              animate
+            );
+        };
+
+      animationFrameRef.current =
+        requestAnimationFrame(
+          animate
+        );
+    }, [
+      isSubmitting,
+      currentPuzzle,
+      tileStates,
+      currentQuestionIndex,
+      puzzles.length,
+      loadQuestion,
+      stopRocketAnimation,
+    ]);
+
+  // ==========================================================================
   // INSTRUCTIONS
-  // ============================================================================
+  // ==========================================================================
 
-  if (stage === "INSTRUCTIONS") {
+  if (
+    stage ===
+    "INSTRUCTIONS"
+  ) {
     return (
       <PathFinderInstructions
-        onNext={handleStartGame}
+        onNext={
+          handleStartGame
+        }
       />
     );
   }
 
-  // ============================================================================
+  // ==========================================================================
   // COMPLETED
-  // ============================================================================
+  // ==========================================================================
 
-  if (stage === "COMPLETED") {
+  if (
+    stage ===
+    "COMPLETED"
+  ) {
     return (
       <div className="flex-1 flex items-center justify-center p-6">
         <Card className="w-full max-w-md text-center p-6 space-y-6">
@@ -603,17 +1261,24 @@ export function PathFinderGame({
             </div>
 
             <CardTitle className="text-2xl font-bold">
-              {testTitle} Completed!
+              {testTitle}{" "}
+              Completed!
             </CardTitle>
           </CardHeader>
 
           <CardContent className="space-y-4 text-sm text-muted-foreground">
             <p>
               You solved all{" "}
-              {puzzles.length} puzzle
-              {puzzles.length > 1 ? "s" : ""} in{" "}
+              {puzzles.length}{" "}
+              puzzle
+              {puzzles.length >
+              1
+                ? "s"
+                : ""}{" "}
+              in{" "}
               <strong className="text-foreground">
-                {totalMoves} total moves
+                {totalMoves}{" "}
+                total moves
               </strong>
               .
             </p>
@@ -634,11 +1299,14 @@ export function PathFinderGame({
     );
   }
 
-  // ============================================================================
+  // ==========================================================================
   // TIMEOUT
-  // ============================================================================
+  // ==========================================================================
 
-  if (stage === "TIMEOUT") {
+  if (
+    stage ===
+    "TIMEOUT"
+  ) {
     return (
       <div className="flex-1 flex items-center justify-center p-6">
         <Card className="w-full max-w-md text-center p-6 space-y-6">
@@ -654,8 +1322,10 @@ export function PathFinderGame({
 
           <CardContent className="space-y-4 text-sm text-muted-foreground">
             <p>
-              The 4:00 time limit for this question
-              has elapsed.
+              The 4:00 time
+              limit for this
+              question has
+              elapsed.
             </p>
 
             <Button
@@ -674,9 +1344,9 @@ export function PathFinderGame({
     );
   }
 
-  // ============================================================================
+  // ==========================================================================
   // PLAYING
-  // ============================================================================
+  // ==========================================================================
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 w-full min-h-[calc(100vh-4rem)] bg-[#f8f9fa] dark:bg-slate-950">
@@ -688,81 +1358,112 @@ export function PathFinderGame({
 
         {feedback && (
           <div
-            className={`text-xs font-medium px-3 py-1 rounded-full transition-all ${
-              feedback.type === "success"
+            className={`text-xs font-medium px-3 py-1 rounded-full ${
+              feedback.type ===
+              "success"
                 ? "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300"
                 : "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300"
             }`}
           >
-            {feedback.message}
+            {
+              feedback.message
+            }
           </div>
         )}
 
         {/* ================================================================== */}
-        {/* 9x9 PATH FINDER BOARD                                             */}
+        {/* BOARD                                                              */}
         {/* ================================================================== */}
 
         <PathFinderBoard
-          puzzle={currentPuzzle}
-          tileStates={tileStates}
-          selectedTileId={selectedTileId}
-          animatingRocket={animatingRocket}
-          onSelectTile={(id) => {
-            if (isSubmitting) {
+          puzzle={
+            currentPuzzle
+          }
+          tileStates={
+            tileStates
+          }
+          selectedTileId={
+            selectedTileId
+          }
+          animatingRocket={
+            animatingRocket
+          }
+          onSelectTile={(
+            id
+          ) => {
+            if (
+              isSubmitting
+            ) {
               return;
             }
 
             setSelectedTileId(
-              (prev) =>
-                prev === id ? null : id
+              (previous) =>
+                previous ===
+                id
+                  ? null
+                  : id
             );
 
-            setFeedback(null);
+            setFeedback(
+              null
+            );
           }}
         />
 
         {/* ================================================================== */}
-        {/* TIMER + CONTROLS                                                  */}
+        {/* TIMER + CONTROLS                                                   */}
         {/* ================================================================== */}
 
         <div className="flex flex-col items-center gap-3 pt-2">
 
           <div className="flex items-center justify-center gap-6 sm:gap-8">
 
-            {/* Timer */}
-
             <PathFinderTimer
-              timeRemaining={timeRemaining}
-              totalTime={240}
+              timeRemaining={
+                timeRemaining
+              }
+              totalTime={
+                240
+              }
               onTimeout={() =>
-                setStage("TIMEOUT")
+                setStage(
+                  "TIMEOUT"
+                )
               }
               isRunning={
-                stage === "PLAYING" &&
+                stage ===
+                  "PLAYING" &&
                 !isSubmitting
               }
             />
 
-            {/* Controls */}
-
             <PathFinderControls
-              onRotate={handleRotate}
+              onRotate={
+                handleRotate
+              }
               onChangeDirection={
                 handleChangeDirection
               }
-              onCheck={handleCheck}
-              hasSelection={
-                selectedTileId !== null
+              onCheck={
+                handleCheck
               }
-              disabled={isSubmitting}
+              hasSelection={
+                selectedTileId !==
+                null
+              }
+              disabled={
+                isSubmitting
+              }
             />
-          </div>
 
-          {/* Moves Counter */}
+          </div>
 
           <div className="text-xs font-medium text-slate-500 dark:text-slate-400 select-none">
-            Moves: {moves}
+            Moves:{" "}
+            {moves}
           </div>
+
         </div>
       </div>
     </div>
