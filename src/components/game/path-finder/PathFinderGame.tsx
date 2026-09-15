@@ -16,6 +16,10 @@ import { PathFinderControls } from "./PathFinderControls";
 import { PathFinderTimer } from "./PathFinderTimer";
 
 import {
+  getPractice1Questions,
+} from "@/lib/games/path-finder/practice-1-puzzle";
+
+import {
   generatePractice2Questions,
 } from "@/lib/games/path-finder/practice-2-puzzle";
 
@@ -571,6 +575,10 @@ export function PathFinderGame({
   const puzzles:
     PuzzleDefinition[] =
     useMemo(() => {
+      if (variant === "practice-1") {
+        return getPractice1Questions();
+      }
+
       return generatePractice2Questions(
         5
       );
