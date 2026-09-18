@@ -11,6 +11,7 @@ import React, {
 import { useRouter } from "next/navigation";
 
 import { PathFinderInstructions } from "./PathFinderInstructions";
+import { PathFinderTutorial } from "./PathFinderTutorial";
 import { PathFinderBoard } from "./PathFinderBoard";
 import { PathFinderControls } from "./PathFinderControls";
 import { PathFinderTimer } from "./PathFinderTimer";
@@ -21,7 +22,12 @@ import {
 
 import {
   generatePractice2Questions,
+  PRACTICE_TEST_2_PUZZLES,
 } from "@/lib/games/path-finder/practice-2-puzzle";
+
+import {
+  PRACTICE_TEST_3_PUZZLES,
+} from "@/lib/games/path-finder/practice-3-puzzle";
 
 import {
   PuzzleDefinition,
@@ -579,10 +585,26 @@ export function PathFinderGame({
         return getPractice1Questions();
       }
 
+      if (variant === "practice-2") {
+        return PRACTICE_TEST_2_PUZZLES;
+      }
+
+      if (variant === "practice-3") {
+        return PRACTICE_TEST_3_PUZZLES;
+      }
+
       return generatePractice2Questions(
         5
       );
     }, [variant]);
+
+  const isFullMock = useMemo(() => {
+    return (
+      variant === "full-mock-test" ||
+      variant === "full-mock" ||
+      variant === "mock"
+    );
+  }, [variant]);
 
   const testTitle = useMemo(() => {
     switch (variant) {
@@ -1883,6 +1905,16 @@ export function PathFinderGame({
     stage ===
     "INSTRUCTIONS"
   ) {
+    if (isFullMock) {
+      return (
+        <PathFinderTutorial
+          onComplete={
+            handleStartGame
+          }
+        />
+      );
+    }
+
     return (
       <PathFinderInstructions
         onNext={
@@ -2011,17 +2043,17 @@ export function PathFinderGame({
         </div>
 
         {/* GAME AREA */}
-        <div className="flex-1 flex flex-col items-center justify-center w-full px-2 sm:px-4 py-4 sm:py-8">
+        <div className="flex-1 flex flex-col items-center justify-center w-full px-2 sm:px-4 py-4 sm:py-8 relative">
 
           {/* BOARD + RESULT MODAL */}
           <div className="relative shrink-0 w-full flex items-center justify-center">
             <PathFinderBoard
               puzzle={currentPuzzle}
               tileStates={tileStates}
-              selectedTileId={selectedTileId}
+              selectedTileId={stage === "PLAYING" ? selectedTileId : null}
               animatingRocket={animatingRocket}
               onSelectTile={(id) => {
-                if (isSubmitting) return;
+                if (stage !== "PLAYING" || isSubmitting) return;
 
                 setSelectedTileId((previous) =>
                   previous === id ? null : id
@@ -2066,8 +2098,8 @@ export function PathFinderGame({
                 onRotate={handleRotate}
                 onChangeDirection={handleChangeDirection}
                 onCheck={handleCheck}
-                hasSelection={selectedTileId !== null}
-                disabled={isSubmitting}
+                hasSelection={stage === "PLAYING" && selectedTileId !== null}
+                disabled={stage !== "PLAYING" || isSubmitting}
               />
             </div>
 

@@ -1,19 +1,17 @@
-import { PuzzleDefinition, TileDefinition, TilePort, TileState, TileType } from "./types";
-import {
-  getEffectivePorts,
-  getEffectiveTileCells,
-  getTileFlipState,
-  SHAPE_FLIP_STATES_COUNT,
-} from "./transformations";
-import { validateRoute } from "./validator";
+import { PuzzleDefinition } from "./types";
 
 /**
- * FIXED / PREDEFINED PRACTICE TEST 2 PUZZLES
- * Exactly 5 static puzzle definitions of medium difficulty.
+ * FIXED / PREDEFINED PRACTICE TEST 3 PUZZLES
+ * Exactly 5 static puzzle definitions of medium-to-difficult progression.
+ * Q1: 14 moves (Moderately difficult warm-up)
+ * Q2: 18 moves (Medium difficulty with misleading branches)
+ * Q3: 21 moves (Medium-hard T-junction/Cross interactions)
+ * Q4: 24 moves (Medium-hard rotation & direction-state coordination)
+ * Q5: 27 moves (Hardest labyrinth of Practice Test 3, comfortably solvable)
  */
-export const PRACTICE_TEST_2_PUZZLES: PuzzleDefinition[] = [
+export const PRACTICE_TEST_3_PUZZLES: PuzzleDefinition[] = [
   {
-    "id": "practice-2-q1",
+    "id": "practice-3-q1",
     "gridRows": 9,
     "gridCols": 9,
     "tileRows": 3,
@@ -34,7 +32,7 @@ export const PRACTICE_TEST_2_PUZZLES: PuzzleDefinition[] = [
         "id": "T00",
         "gridRow": 0,
         "gridCol": 0,
-        "type": "T_JUNCTION",
+        "type": "CORNER",
         "cells": [
           [
             {
@@ -50,7 +48,7 @@ export const PRACTICE_TEST_2_PUZZLES: PuzzleDefinition[] = [
           ],
           [
             {
-              "active": true
+              "active": false
             },
             {
               "active": true,
@@ -122,6 +120,50 @@ export const PRACTICE_TEST_2_PUZZLES: PuzzleDefinition[] = [
         "id": "T02",
         "gridRow": 0,
         "gridCol": 2,
+        "type": "CORNER",
+        "cells": [
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": false
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP_LEFT"
+            },
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": false
+            },
+            {
+              "active": false
+            }
+          ]
+        ]
+      },
+      {
+        "id": "T10",
+        "gridRow": 1,
+        "gridCol": 0,
         "type": "CROSS",
         "cells": [
           [
@@ -163,10 +205,10 @@ export const PRACTICE_TEST_2_PUZZLES: PuzzleDefinition[] = [
         ]
       },
       {
-        "id": "T10",
+        "id": "T11",
         "gridRow": 1,
-        "gridCol": 0,
-        "type": "T_JUNCTION",
+        "gridCol": 1,
+        "type": "CORNER",
         "cells": [
           [
             {
@@ -182,55 +224,11 @@ export const PRACTICE_TEST_2_PUZZLES: PuzzleDefinition[] = [
           ],
           [
             {
-              "active": true
+              "active": false
             },
             {
               "active": true,
               "arrowDirection": "UP_LEFT"
-            },
-            {
-              "active": true,
-              "arrowDirection": "LEFT"
-            }
-          ],
-          [
-            {
-              "active": false
-            },
-            {
-              "active": false
-            },
-            {
-              "active": false
-            }
-          ]
-        ]
-      },
-      {
-        "id": "T11",
-        "gridRow": 1,
-        "gridCol": 1,
-        "type": "STRAIGHT",
-        "cells": [
-          [
-            {
-              "active": false
-            },
-            {
-              "active": false
-            },
-            {
-              "active": false
-            }
-          ],
-          [
-            {
-              "active": true,
-              "arrowDirection": "LEFT"
-            },
-            {
-              "active": true,
-              "arrowDirection": "LEFT"
             },
             {
               "active": true,
@@ -342,555 +340,6 @@ export const PRACTICE_TEST_2_PUZZLES: PuzzleDefinition[] = [
         "id": "T21",
         "gridRow": 2,
         "gridCol": 1,
-        "type": "STRAIGHT",
-        "cells": [
-          [
-            {
-              "active": false
-            },
-            {
-              "active": false
-            },
-            {
-              "active": false
-            }
-          ],
-          [
-            {
-              "active": true,
-              "arrowDirection": "LEFT"
-            },
-            {
-              "active": true,
-              "arrowDirection": "LEFT"
-            },
-            {
-              "active": true,
-              "arrowDirection": "LEFT"
-            }
-          ],
-          [
-            {
-              "active": false
-            },
-            {
-              "active": false
-            },
-            {
-              "active": false
-            }
-          ]
-        ]
-      },
-      {
-        "id": "T22",
-        "gridRow": 2,
-        "gridCol": 2,
-        "type": "CROSS",
-        "cells": [
-          [
-            {
-              "active": false
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": false
-            }
-          ],
-          [
-            {
-              "active": true
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": true
-            }
-          ],
-          [
-            {
-              "active": false
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": false
-            }
-          ]
-        ]
-      }
-    ],
-    "initialTileStates": {
-      "T00": {
-        "rotation": 3,
-        "flipState": 0,
-        "mode": 0,
-        "flipped": false,
-        "directionReversed": false
-      },
-      "T01": {
-        "rotation": 3,
-        "flipState": 1,
-        "mode": 1,
-        "flipped": true,
-        "directionReversed": true
-      },
-      "T02": {
-        "rotation": 2,
-        "flipState": 0,
-        "mode": 0,
-        "flipped": false,
-        "directionReversed": false
-      },
-      "T10": {
-        "rotation": 2,
-        "flipState": 4,
-        "mode": 4,
-        "flipped": false,
-        "directionReversed": false
-      },
-      "T11": {
-        "rotation": 0,
-        "flipState": 1,
-        "mode": 1,
-        "flipped": true,
-        "directionReversed": true
-      },
-      "T12": {
-        "rotation": 3,
-        "flipState": 0,
-        "mode": 0,
-        "flipped": false,
-        "directionReversed": false
-      },
-      "T20": {
-        "rotation": 0,
-        "flipState": 2,
-        "mode": 2,
-        "flipped": false,
-        "directionReversed": false
-      },
-      "T21": {
-        "rotation": 2,
-        "flipState": 0,
-        "mode": 0,
-        "flipped": false,
-        "directionReversed": false
-      },
-      "T22": {
-        "rotation": 3,
-        "flipState": 7,
-        "mode": 7,
-        "flipped": true,
-        "directionReversed": true
-      }
-    },
-    "solution": {
-      "minMoves": 31,
-      "tileStates": {
-        "T00": {
-          "rotation": 2,
-          "flipState": 0,
-          "mode": 0,
-          "flipped": false,
-          "directionReversed": false
-        },
-        "T01": {
-          "rotation": 0,
-          "flipState": 0,
-          "mode": 0,
-          "flipped": false,
-          "directionReversed": false
-        },
-        "T02": {
-          "rotation": 0,
-          "flipState": 6,
-          "mode": 6,
-          "flipped": false,
-          "directionReversed": false
-        },
-        "T10": {
-          "rotation": 1,
-          "flipState": 5,
-          "mode": 5,
-          "flipped": true,
-          "directionReversed": true
-        },
-        "T11": {
-          "rotation": 0,
-          "flipState": 1,
-          "mode": 1,
-          "flipped": true,
-          "directionReversed": true
-        },
-        "T12": {
-          "rotation": 1,
-          "flipState": 0,
-          "mode": 0,
-          "flipped": false,
-          "directionReversed": false
-        },
-        "T20": {
-          "rotation": 1,
-          "flipState": 2,
-          "mode": 2,
-          "flipped": false,
-          "directionReversed": false
-        },
-        "T21": {
-          "rotation": 2,
-          "flipState": 1,
-          "mode": 1,
-          "flipped": true,
-          "directionReversed": true
-        },
-        "T22": {
-          "rotation": 0,
-          "flipState": 4,
-          "mode": 4,
-          "flipped": false,
-          "directionReversed": false
-        }
-      }
-    }
-  },
-  {
-    "id": "practice-2-q2",
-    "gridRows": 9,
-    "gridCols": 9,
-    "tileRows": 3,
-    "tileCols": 3,
-    "tileSize": 3,
-    "startPos": {
-      "row": 4,
-      "col": 0,
-      "entrySide": "LEFT"
-    },
-    "destinationPos": {
-      "row": 7,
-      "col": 8,
-      "exitSide": "RIGHT"
-    },
-    "tiles": [
-      {
-        "id": "T00",
-        "gridRow": 0,
-        "gridCol": 0,
-        "type": "CORNER",
-        "cells": [
-          [
-            {
-              "active": false
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": false
-            }
-          ],
-          [
-            {
-              "active": false
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP_LEFT"
-            },
-            {
-              "active": true,
-              "arrowDirection": "LEFT"
-            }
-          ],
-          [
-            {
-              "active": false
-            },
-            {
-              "active": false
-            },
-            {
-              "active": false
-            }
-          ]
-        ]
-      },
-      {
-        "id": "T01",
-        "gridRow": 0,
-        "gridCol": 1,
-        "type": "CROSS",
-        "cells": [
-          [
-            {
-              "active": false
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": false
-            }
-          ],
-          [
-            {
-              "active": true
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": true
-            }
-          ],
-          [
-            {
-              "active": false
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": false
-            }
-          ]
-        ]
-      },
-      {
-        "id": "T02",
-        "gridRow": 0,
-        "gridCol": 2,
-        "type": "STRAIGHT",
-        "cells": [
-          [
-            {
-              "active": false
-            },
-            {
-              "active": false
-            },
-            {
-              "active": false
-            }
-          ],
-          [
-            {
-              "active": true,
-              "arrowDirection": "LEFT"
-            },
-            {
-              "active": true,
-              "arrowDirection": "LEFT"
-            },
-            {
-              "active": true,
-              "arrowDirection": "LEFT"
-            }
-          ],
-          [
-            {
-              "active": false
-            },
-            {
-              "active": false
-            },
-            {
-              "active": false
-            }
-          ]
-        ]
-      },
-      {
-        "id": "T10",
-        "gridRow": 1,
-        "gridCol": 0,
-        "type": "CORNER",
-        "cells": [
-          [
-            {
-              "active": false
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": false
-            }
-          ],
-          [
-            {
-              "active": false
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP_LEFT"
-            },
-            {
-              "active": true,
-              "arrowDirection": "LEFT"
-            }
-          ],
-          [
-            {
-              "active": false
-            },
-            {
-              "active": false
-            },
-            {
-              "active": false
-            }
-          ]
-        ]
-      },
-      {
-        "id": "T11",
-        "gridRow": 1,
-        "gridCol": 1,
-        "type": "STRAIGHT",
-        "cells": [
-          [
-            {
-              "active": false
-            },
-            {
-              "active": false
-            },
-            {
-              "active": false
-            }
-          ],
-          [
-            {
-              "active": true,
-              "arrowDirection": "LEFT"
-            },
-            {
-              "active": true,
-              "arrowDirection": "LEFT"
-            },
-            {
-              "active": true,
-              "arrowDirection": "LEFT"
-            }
-          ],
-          [
-            {
-              "active": false
-            },
-            {
-              "active": false
-            },
-            {
-              "active": false
-            }
-          ]
-        ]
-      },
-      {
-        "id": "T12",
-        "gridRow": 1,
-        "gridCol": 2,
-        "type": "STRAIGHT",
-        "cells": [
-          [
-            {
-              "active": false
-            },
-            {
-              "active": false
-            },
-            {
-              "active": false
-            }
-          ],
-          [
-            {
-              "active": true,
-              "arrowDirection": "LEFT"
-            },
-            {
-              "active": true,
-              "arrowDirection": "LEFT"
-            },
-            {
-              "active": true,
-              "arrowDirection": "LEFT"
-            }
-          ],
-          [
-            {
-              "active": false
-            },
-            {
-              "active": false
-            },
-            {
-              "active": false
-            }
-          ]
-        ]
-      },
-      {
-        "id": "T20",
-        "gridRow": 2,
-        "gridCol": 0,
-        "type": "CROSS",
-        "cells": [
-          [
-            {
-              "active": false
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": false
-            }
-          ],
-          [
-            {
-              "active": true
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": true
-            }
-          ],
-          [
-            {
-              "active": false
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": false
-            }
-          ]
-        ]
-      },
-      {
-        "id": "T21",
-        "gridRow": 2,
-        "gridCol": 1,
         "type": "CROSS",
         "cells": [
           [
@@ -935,14 +384,15 @@ export const PRACTICE_TEST_2_PUZZLES: PuzzleDefinition[] = [
         "id": "T22",
         "gridRow": 2,
         "gridCol": 2,
-        "type": "STRAIGHT",
+        "type": "CROSS",
         "cells": [
           [
             {
               "active": false
             },
             {
-              "active": false
+              "active": true,
+              "arrowDirection": "UP"
             },
             {
               "active": false
@@ -950,16 +400,14 @@ export const PRACTICE_TEST_2_PUZZLES: PuzzleDefinition[] = [
           ],
           [
             {
-              "active": true,
-              "arrowDirection": "LEFT"
+              "active": true
             },
             {
               "active": true,
-              "arrowDirection": "LEFT"
+              "arrowDirection": "UP"
             },
             {
-              "active": true,
-              "arrowDirection": "LEFT"
+              "active": true
             }
           ],
           [
@@ -967,7 +415,8 @@ export const PRACTICE_TEST_2_PUZZLES: PuzzleDefinition[] = [
               "active": false
             },
             {
-              "active": false
+              "active": true,
+              "arrowDirection": "UP"
             },
             {
               "active": false
@@ -979,594 +428,594 @@ export const PRACTICE_TEST_2_PUZZLES: PuzzleDefinition[] = [
     "initialTileStates": {
       "T00": {
         "rotation": 1,
-        "flipState": 1,
-        "mode": 1,
-        "flipped": true,
-        "directionReversed": true
+        "flipState": 0,
+        "mode": 0,
+        "flipped": false,
+        "directionReversed": false
       },
       "T01": {
-        "rotation": 1,
-        "flipState": 10,
-        "mode": 10,
+        "rotation": 2,
+        "flipState": 0,
+        "mode": 0,
         "flipped": false,
         "directionReversed": false
       },
       "T02": {
-        "rotation": 0,
-        "flipState": 0,
-        "mode": 0,
-        "flipped": false,
-        "directionReversed": false
+        "rotation": 1,
+        "flipState": 1,
+        "mode": 1,
+        "flipped": true,
+        "directionReversed": true
       },
       "T10": {
-        "rotation": 2,
-        "flipState": 0,
-        "mode": 0,
-        "flipped": false,
-        "directionReversed": false
-      },
-      "T11": {
-        "rotation": 2,
-        "flipState": 0,
-        "mode": 0,
-        "flipped": false,
-        "directionReversed": false
-      },
-      "T12": {
-        "rotation": 2,
-        "flipState": 1,
-        "mode": 1,
-        "flipped": true,
-        "directionReversed": true
-      },
-      "T20": {
         "rotation": 3,
-        "flipState": 11,
-        "mode": 11,
-        "flipped": true,
-        "directionReversed": true
-      },
-      "T21": {
-        "rotation": 0,
-        "flipState": 4,
-        "mode": 4,
-        "flipped": false,
-        "directionReversed": false
-      },
-      "T22": {
-        "rotation": 3,
-        "flipState": 1,
-        "mode": 1,
-        "flipped": true,
-        "directionReversed": true
-      }
-    },
-    "solution": {
-      "minMoves": 22,
-      "tileStates": {
-        "T00": {
-          "rotation": 3,
-          "flipState": 1,
-          "mode": 1,
-          "flipped": true,
-          "directionReversed": true
-        },
-        "T01": {
-          "rotation": 1,
-          "flipState": 10,
-          "mode": 10,
-          "flipped": false,
-          "directionReversed": false
-        },
-        "T02": {
-          "rotation": 0,
-          "flipState": 1,
-          "mode": 1,
-          "flipped": true,
-          "directionReversed": true
-        },
-        "T10": {
-          "rotation": 2,
-          "flipState": 0,
-          "mode": 0,
-          "flipped": false,
-          "directionReversed": false
-        },
-        "T11": {
-          "rotation": 3,
-          "flipState": 1,
-          "mode": 1,
-          "flipped": true,
-          "directionReversed": true
-        },
-        "T12": {
-          "rotation": 0,
-          "flipState": 0,
-          "mode": 0,
-          "flipped": false,
-          "directionReversed": false
-        },
-        "T20": {
-          "rotation": 1,
-          "flipState": 5,
-          "mode": 5,
-          "flipped": true,
-          "directionReversed": true
-        },
-        "T21": {
-          "rotation": 0,
-          "flipState": 2,
-          "mode": 2,
-          "flipped": false,
-          "directionReversed": false
-        },
-        "T22": {
-          "rotation": 2,
-          "flipState": 0,
-          "mode": 0,
-          "flipped": false,
-          "directionReversed": false
-        }
-      }
-    }
-  },
-  {
-    "id": "practice-2-q3",
-    "gridRows": 9,
-    "gridCols": 9,
-    "tileRows": 3,
-    "tileCols": 3,
-    "tileSize": 3,
-    "startPos": {
-      "row": 7,
-      "col": 0,
-      "entrySide": "LEFT"
-    },
-    "destinationPos": {
-      "row": 1,
-      "col": 8,
-      "exitSide": "RIGHT"
-    },
-    "tiles": [
-      {
-        "id": "T00",
-        "gridRow": 0,
-        "gridCol": 0,
-        "type": "CORNER",
-        "cells": [
-          [
-            {
-              "active": false
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": false
-            }
-          ],
-          [
-            {
-              "active": false
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP_LEFT"
-            },
-            {
-              "active": true,
-              "arrowDirection": "LEFT"
-            }
-          ],
-          [
-            {
-              "active": false
-            },
-            {
-              "active": false
-            },
-            {
-              "active": false
-            }
-          ]
-        ]
-      },
-      {
-        "id": "T01",
-        "gridRow": 0,
-        "gridCol": 1,
-        "type": "CROSS",
-        "cells": [
-          [
-            {
-              "active": false
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": false
-            }
-          ],
-          [
-            {
-              "active": true
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": true
-            }
-          ],
-          [
-            {
-              "active": false
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": false
-            }
-          ]
-        ]
-      },
-      {
-        "id": "T02",
-        "gridRow": 0,
-        "gridCol": 2,
-        "type": "T_JUNCTION",
-        "cells": [
-          [
-            {
-              "active": false
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": false
-            }
-          ],
-          [
-            {
-              "active": true
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP_LEFT"
-            },
-            {
-              "active": true,
-              "arrowDirection": "LEFT"
-            }
-          ],
-          [
-            {
-              "active": false
-            },
-            {
-              "active": false
-            },
-            {
-              "active": false
-            }
-          ]
-        ]
-      },
-      {
-        "id": "T10",
-        "gridRow": 1,
-        "gridCol": 0,
-        "type": "CORNER",
-        "cells": [
-          [
-            {
-              "active": false
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": false
-            }
-          ],
-          [
-            {
-              "active": false
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP_LEFT"
-            },
-            {
-              "active": true,
-              "arrowDirection": "LEFT"
-            }
-          ],
-          [
-            {
-              "active": false
-            },
-            {
-              "active": false
-            },
-            {
-              "active": false
-            }
-          ]
-        ]
-      },
-      {
-        "id": "T11",
-        "gridRow": 1,
-        "gridCol": 1,
-        "type": "STRAIGHT",
-        "cells": [
-          [
-            {
-              "active": false
-            },
-            {
-              "active": false
-            },
-            {
-              "active": false
-            }
-          ],
-          [
-            {
-              "active": true,
-              "arrowDirection": "LEFT"
-            },
-            {
-              "active": true,
-              "arrowDirection": "LEFT"
-            },
-            {
-              "active": true,
-              "arrowDirection": "LEFT"
-            }
-          ],
-          [
-            {
-              "active": false
-            },
-            {
-              "active": false
-            },
-            {
-              "active": false
-            }
-          ]
-        ]
-      },
-      {
-        "id": "T12",
-        "gridRow": 1,
-        "gridCol": 2,
-        "type": "T_JUNCTION",
-        "cells": [
-          [
-            {
-              "active": false
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": false
-            }
-          ],
-          [
-            {
-              "active": true
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP_LEFT"
-            },
-            {
-              "active": true,
-              "arrowDirection": "LEFT"
-            }
-          ],
-          [
-            {
-              "active": false
-            },
-            {
-              "active": false
-            },
-            {
-              "active": false
-            }
-          ]
-        ]
-      },
-      {
-        "id": "T20",
-        "gridRow": 2,
-        "gridCol": 0,
-        "type": "CROSS",
-        "cells": [
-          [
-            {
-              "active": false
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": false
-            }
-          ],
-          [
-            {
-              "active": true
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": true
-            }
-          ],
-          [
-            {
-              "active": false
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": false
-            }
-          ]
-        ]
-      },
-      {
-        "id": "T21",
-        "gridRow": 2,
-        "gridCol": 1,
-        "type": "STRAIGHT",
-        "cells": [
-          [
-            {
-              "active": false
-            },
-            {
-              "active": false
-            },
-            {
-              "active": false
-            }
-          ],
-          [
-            {
-              "active": true,
-              "arrowDirection": "LEFT"
-            },
-            {
-              "active": true,
-              "arrowDirection": "LEFT"
-            },
-            {
-              "active": true,
-              "arrowDirection": "LEFT"
-            }
-          ],
-          [
-            {
-              "active": false
-            },
-            {
-              "active": false
-            },
-            {
-              "active": false
-            }
-          ]
-        ]
-      },
-      {
-        "id": "T22",
-        "gridRow": 2,
-        "gridCol": 2,
-        "type": "CROSS",
-        "cells": [
-          [
-            {
-              "active": false
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": false
-            }
-          ],
-          [
-            {
-              "active": true
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": true
-            }
-          ],
-          [
-            {
-              "active": false
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": false
-            }
-          ]
-        ]
-      }
-    ],
-    "initialTileStates": {
-      "T00": {
-        "rotation": 3,
-        "flipState": 0,
-        "mode": 0,
-        "flipped": false,
-        "directionReversed": false
-      },
-      "T01": {
-        "rotation": 0,
         "flipState": 5,
         "mode": 5,
         "flipped": true,
         "directionReversed": true
       },
-      "T02": {
+      "T11": {
         "rotation": 0,
+        "flipState": 0,
+        "mode": 0,
+        "flipped": false,
+        "directionReversed": false
+      },
+      "T12": {
+        "rotation": 1,
+        "flipState": 0,
+        "mode": 0,
+        "flipped": false,
+        "directionReversed": false
+      },
+      "T20": {
+        "rotation": 2,
+        "flipState": 4,
+        "mode": 4,
+        "flipped": false,
+        "directionReversed": false
+      },
+      "T21": {
+        "rotation": 0,
+        "flipState": 4,
+        "mode": 4,
+        "flipped": false,
+        "directionReversed": false
+      },
+      "T22": {
+        "rotation": 2,
+        "flipState": 9,
+        "mode": 9,
+        "flipped": true,
+        "directionReversed": true
+      }
+    },
+    "solution": {
+      "minMoves": 14,
+      "tileStates": {
+        "T00": {
+          "rotation": 2,
+          "flipState": 0,
+          "mode": 0,
+          "flipped": false,
+          "directionReversed": false
+        },
+        "T01": {
+          "rotation": 2,
+          "flipState": 0,
+          "mode": 0,
+          "flipped": false,
+          "directionReversed": false
+        },
+        "T02": {
+          "rotation": 2,
+          "flipState": 0,
+          "mode": 0,
+          "flipped": false,
+          "directionReversed": false
+        },
+        "T10": {
+          "rotation": 3,
+          "flipState": 7,
+          "mode": 7,
+          "flipped": true,
+          "directionReversed": true
+        },
+        "T11": {
+          "rotation": 2,
+          "flipState": 1,
+          "mode": 1,
+          "flipped": true,
+          "directionReversed": true
+        },
+        "T12": {
+          "rotation": 1,
+          "flipState": 1,
+          "mode": 1,
+          "flipped": true,
+          "directionReversed": true
+        },
+        "T20": {
+          "rotation": 2,
+          "flipState": 5,
+          "mode": 5,
+          "flipped": true,
+          "directionReversed": true
+        },
+        "T21": {
+          "rotation": 1,
+          "flipState": 4,
+          "mode": 4,
+          "flipped": false,
+          "directionReversed": false
+        },
+        "T22": {
+          "rotation": 1,
+          "flipState": 9,
+          "mode": 9,
+          "flipped": true,
+          "directionReversed": true
+        }
+      }
+    }
+  },
+  {
+    "id": "practice-3-q2",
+    "gridRows": 9,
+    "gridCols": 9,
+    "tileRows": 3,
+    "tileCols": 3,
+    "tileSize": 3,
+    "startPos": {
+      "row": 7,
+      "col": 0,
+      "entrySide": "LEFT"
+    },
+    "destinationPos": {
+      "row": 1,
+      "col": 8,
+      "exitSide": "RIGHT"
+    },
+    "tiles": [
+      {
+        "id": "T00",
+        "gridRow": 0,
+        "gridCol": 0,
+        "type": "CROSS",
+        "cells": [
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": false
+            }
+          ],
+          [
+            {
+              "active": true
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": true
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": false
+            }
+          ]
+        ]
+      },
+      {
+        "id": "T01",
+        "gridRow": 0,
+        "gridCol": 1,
+        "type": "STRAIGHT",
+        "cells": [
+          [
+            {
+              "active": false
+            },
+            {
+              "active": false
+            },
+            {
+              "active": false
+            }
+          ],
+          [
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            },
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            },
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": false
+            },
+            {
+              "active": false
+            }
+          ]
+        ]
+      },
+      {
+        "id": "T02",
+        "gridRow": 0,
+        "gridCol": 2,
+        "type": "CORNER",
+        "cells": [
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": false
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP_LEFT"
+            },
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": false
+            },
+            {
+              "active": false
+            }
+          ]
+        ]
+      },
+      {
+        "id": "T10",
+        "gridRow": 1,
+        "gridCol": 0,
+        "type": "CROSS",
+        "cells": [
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": false
+            }
+          ],
+          [
+            {
+              "active": true
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": true
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": false
+            }
+          ]
+        ]
+      },
+      {
+        "id": "T11",
+        "gridRow": 1,
+        "gridCol": 1,
+        "type": "CORNER",
+        "cells": [
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": false
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP_LEFT"
+            },
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": false
+            },
+            {
+              "active": false
+            }
+          ]
+        ]
+      },
+      {
+        "id": "T12",
+        "gridRow": 1,
+        "gridCol": 2,
+        "type": "T_JUNCTION",
+        "cells": [
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": false
+            }
+          ],
+          [
+            {
+              "active": true
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP_LEFT"
+            },
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": false
+            },
+            {
+              "active": false
+            }
+          ]
+        ]
+      },
+      {
+        "id": "T20",
+        "gridRow": 2,
+        "gridCol": 0,
+        "type": "T_JUNCTION",
+        "cells": [
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": false
+            }
+          ],
+          [
+            {
+              "active": true
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP_LEFT"
+            },
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": false
+            },
+            {
+              "active": false
+            }
+          ]
+        ]
+      },
+      {
+        "id": "T21",
+        "gridRow": 2,
+        "gridCol": 1,
+        "type": "CROSS",
+        "cells": [
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": false
+            }
+          ],
+          [
+            {
+              "active": true
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": true
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": false
+            }
+          ]
+        ]
+      },
+      {
+        "id": "T22",
+        "gridRow": 2,
+        "gridCol": 2,
+        "type": "STRAIGHT",
+        "cells": [
+          [
+            {
+              "active": false
+            },
+            {
+              "active": false
+            },
+            {
+              "active": false
+            }
+          ],
+          [
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            },
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            },
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": false
+            },
+            {
+              "active": false
+            }
+          ]
+        ]
+      }
+    ],
+    "initialTileStates": {
+      "T00": {
+        "rotation": 3,
         "flipState": 3,
         "mode": 3,
         "flipped": true,
         "directionReversed": true
       },
+      "T01": {
+        "rotation": 0,
+        "flipState": 1,
+        "mode": 1,
+        "flipped": true,
+        "directionReversed": true
+      },
+      "T02": {
+        "rotation": 1,
+        "flipState": 1,
+        "mode": 1,
+        "flipped": true,
+        "directionReversed": true
+      },
       "T10": {
         "rotation": 0,
-        "flipState": 0,
-        "mode": 0,
-        "flipped": false,
-        "directionReversed": false
+        "flipState": 11,
+        "mode": 11,
+        "flipped": true,
+        "directionReversed": true
       },
       "T11": {
-        "rotation": 0,
-        "flipState": 0,
-        "mode": 0,
-        "flipped": false,
-        "directionReversed": false
+        "rotation": 1,
+        "flipState": 1,
+        "mode": 1,
+        "flipped": true,
+        "directionReversed": true
       },
       "T12": {
         "rotation": 1,
-        "flipState": 5,
-        "mode": 5,
-        "flipped": true,
-        "directionReversed": true
+        "flipState": 2,
+        "mode": 2,
+        "flipped": false,
+        "directionReversed": false
       },
       "T20": {
         "rotation": 0,
@@ -1576,36 +1025,585 @@ export const PRACTICE_TEST_2_PUZZLES: PuzzleDefinition[] = [
         "directionReversed": false
       },
       "T21": {
-        "rotation": 1,
-        "flipState": 0,
-        "mode": 0,
-        "flipped": false,
-        "directionReversed": false
-      },
-      "T22": {
         "rotation": 3,
         "flipState": 2,
         "mode": 2,
         "flipped": false,
         "directionReversed": false
+      },
+      "T22": {
+        "rotation": 0,
+        "flipState": 0,
+        "mode": 0,
+        "flipped": false,
+        "directionReversed": false
       }
     },
     "solution": {
-      "minMoves": 36,
+      "minMoves": 18,
       "tileStates": {
         "T00": {
+          "rotation": 1,
+          "flipState": 4,
+          "mode": 4,
+          "flipped": false,
+          "directionReversed": false
+        },
+        "T01": {
           "rotation": 0,
           "flipState": 1,
           "mode": 1,
           "flipped": true,
           "directionReversed": true
         },
-        "T01": {
-          "rotation": 2,
-          "flipState": 11,
-          "mode": 11,
+        "T02": {
+          "rotation": 1,
+          "flipState": 0,
+          "mode": 0,
+          "flipped": false,
+          "directionReversed": false
+        },
+        "T10": {
+          "rotation": 0,
+          "flipState": 0,
+          "mode": 0,
+          "flipped": false,
+          "directionReversed": false
+        },
+        "T11": {
+          "rotation": 1,
+          "flipState": 0,
+          "mode": 0,
+          "flipped": false,
+          "directionReversed": false
+        },
+        "T12": {
+          "rotation": 0,
+          "flipState": 2,
+          "mode": 2,
+          "flipped": false,
+          "directionReversed": false
+        },
+        "T20": {
+          "rotation": 0,
+          "flipState": 5,
+          "mode": 5,
           "flipped": true,
           "directionReversed": true
+        },
+        "T21": {
+          "rotation": 3,
+          "flipState": 6,
+          "mode": 6,
+          "flipped": false,
+          "directionReversed": false
+        },
+        "T22": {
+          "rotation": 2,
+          "flipState": 0,
+          "mode": 0,
+          "flipped": false,
+          "directionReversed": false
+        }
+      }
+    }
+  },
+  {
+    "id": "practice-3-q3",
+    "gridRows": 9,
+    "gridCols": 9,
+    "tileRows": 3,
+    "tileCols": 3,
+    "tileSize": 3,
+    "startPos": {
+      "row": 4,
+      "col": 0,
+      "entrySide": "LEFT"
+    },
+    "destinationPos": {
+      "row": 1,
+      "col": 8,
+      "exitSide": "RIGHT"
+    },
+    "tiles": [
+      {
+        "id": "T00",
+        "gridRow": 0,
+        "gridCol": 0,
+        "type": "T_JUNCTION",
+        "cells": [
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": false
+            }
+          ],
+          [
+            {
+              "active": true
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP_LEFT"
+            },
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": false
+            },
+            {
+              "active": false
+            }
+          ]
+        ]
+      },
+      {
+        "id": "T01",
+        "gridRow": 0,
+        "gridCol": 1,
+        "type": "CROSS",
+        "cells": [
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": false
+            }
+          ],
+          [
+            {
+              "active": true
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": true
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": false
+            }
+          ]
+        ]
+      },
+      {
+        "id": "T02",
+        "gridRow": 0,
+        "gridCol": 2,
+        "type": "CROSS",
+        "cells": [
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": false
+            }
+          ],
+          [
+            {
+              "active": true
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": true
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": false
+            }
+          ]
+        ]
+      },
+      {
+        "id": "T10",
+        "gridRow": 1,
+        "gridCol": 0,
+        "type": "CROSS",
+        "cells": [
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": false
+            }
+          ],
+          [
+            {
+              "active": true
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": true
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": false
+            }
+          ]
+        ]
+      },
+      {
+        "id": "T11",
+        "gridRow": 1,
+        "gridCol": 1,
+        "type": "CORNER",
+        "cells": [
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": false
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP_LEFT"
+            },
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": false
+            },
+            {
+              "active": false
+            }
+          ]
+        ]
+      },
+      {
+        "id": "T12",
+        "gridRow": 1,
+        "gridCol": 2,
+        "type": "STRAIGHT",
+        "cells": [
+          [
+            {
+              "active": false
+            },
+            {
+              "active": false
+            },
+            {
+              "active": false
+            }
+          ],
+          [
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            },
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            },
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": false
+            },
+            {
+              "active": false
+            }
+          ]
+        ]
+      },
+      {
+        "id": "T20",
+        "gridRow": 2,
+        "gridCol": 0,
+        "type": "CORNER",
+        "cells": [
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": false
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP_LEFT"
+            },
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": false
+            },
+            {
+              "active": false
+            }
+          ]
+        ]
+      },
+      {
+        "id": "T21",
+        "gridRow": 2,
+        "gridCol": 1,
+        "type": "T_JUNCTION",
+        "cells": [
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": false
+            }
+          ],
+          [
+            {
+              "active": true
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP_LEFT"
+            },
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": false
+            },
+            {
+              "active": false
+            }
+          ]
+        ]
+      },
+      {
+        "id": "T22",
+        "gridRow": 2,
+        "gridCol": 2,
+        "type": "CORNER",
+        "cells": [
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": false
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP_LEFT"
+            },
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": false
+            },
+            {
+              "active": false
+            }
+          ]
+        ]
+      }
+    ],
+    "initialTileStates": {
+      "T00": {
+        "rotation": 1,
+        "flipState": 5,
+        "mode": 5,
+        "flipped": true,
+        "directionReversed": true
+      },
+      "T01": {
+        "rotation": 1,
+        "flipState": 0,
+        "mode": 0,
+        "flipped": false,
+        "directionReversed": false
+      },
+      "T02": {
+        "rotation": 3,
+        "flipState": 1,
+        "mode": 1,
+        "flipped": true,
+        "directionReversed": true
+      },
+      "T10": {
+        "rotation": 0,
+        "flipState": 7,
+        "mode": 7,
+        "flipped": true,
+        "directionReversed": true
+      },
+      "T11": {
+        "rotation": 3,
+        "flipState": 0,
+        "mode": 0,
+        "flipped": false,
+        "directionReversed": false
+      },
+      "T12": {
+        "rotation": 3,
+        "flipState": 1,
+        "mode": 1,
+        "flipped": true,
+        "directionReversed": true
+      },
+      "T20": {
+        "rotation": 0,
+        "flipState": 0,
+        "mode": 0,
+        "flipped": false,
+        "directionReversed": false
+      },
+      "T21": {
+        "rotation": 0,
+        "flipState": 4,
+        "mode": 4,
+        "flipped": false,
+        "directionReversed": false
+      },
+      "T22": {
+        "rotation": 2,
+        "flipState": 0,
+        "mode": 0,
+        "flipped": false,
+        "directionReversed": false
+      }
+    },
+    "solution": {
+      "minMoves": 21,
+      "tileStates": {
+        "T00": {
+          "rotation": 1,
+          "flipState": 1,
+          "mode": 1,
+          "flipped": true,
+          "directionReversed": true
+        },
+        "T01": {
+          "rotation": 0,
+          "flipState": 2,
+          "mode": 2,
+          "flipped": false,
+          "directionReversed": false
         },
         "T02": {
           "rotation": 1,
@@ -1615,11 +1613,11 @@ export const PRACTICE_TEST_2_PUZZLES: PuzzleDefinition[] = [
           "directionReversed": true
         },
         "T10": {
-          "rotation": 1,
-          "flipState": 1,
-          "mode": 1,
-          "flipped": true,
-          "directionReversed": true
+          "rotation": 2,
+          "flipState": 8,
+          "mode": 8,
+          "flipped": false,
+          "directionReversed": false
         },
         "T11": {
           "rotation": 3,
@@ -1629,38 +1627,38 @@ export const PRACTICE_TEST_2_PUZZLES: PuzzleDefinition[] = [
           "directionReversed": true
         },
         "T12": {
-          "rotation": 3,
-          "flipState": 4,
-          "mode": 4,
-          "flipped": false,
-          "directionReversed": false
-        },
-        "T20": {
-          "rotation": 0,
-          "flipState": 2,
-          "mode": 2,
-          "flipped": false,
-          "directionReversed": false
-        },
-        "T21": {
           "rotation": 2,
           "flipState": 0,
           "mode": 0,
           "flipped": false,
           "directionReversed": false
         },
-        "T22": {
+        "T20": {
+          "rotation": 0,
+          "flipState": 1,
+          "mode": 1,
+          "flipped": true,
+          "directionReversed": true
+        },
+        "T21": {
           "rotation": 2,
-          "flipState": 8,
-          "mode": 8,
+          "flipState": 4,
+          "mode": 4,
           "flipped": false,
           "directionReversed": false
+        },
+        "T22": {
+          "rotation": 2,
+          "flipState": 1,
+          "mode": 1,
+          "flipped": true,
+          "directionReversed": true
         }
       }
     }
   },
   {
-    "id": "practice-2-q4",
+    "id": "practice-3-q4",
     "gridRows": 9,
     "gridCols": 9,
     "tileRows": 3,
@@ -1725,15 +1723,14 @@ export const PRACTICE_TEST_2_PUZZLES: PuzzleDefinition[] = [
         "id": "T01",
         "gridRow": 0,
         "gridCol": 1,
-        "type": "CORNER",
+        "type": "STRAIGHT",
         "cells": [
           [
             {
               "active": false
             },
             {
-              "active": true,
-              "arrowDirection": "UP"
+              "active": false
             },
             {
               "active": false
@@ -1741,11 +1738,12 @@ export const PRACTICE_TEST_2_PUZZLES: PuzzleDefinition[] = [
           ],
           [
             {
-              "active": false
+              "active": true,
+              "arrowDirection": "LEFT"
             },
             {
               "active": true,
-              "arrowDirection": "UP_LEFT"
+              "arrowDirection": "LEFT"
             },
             {
               "active": true,
@@ -1769,7 +1767,7 @@ export const PRACTICE_TEST_2_PUZZLES: PuzzleDefinition[] = [
         "id": "T02",
         "gridRow": 0,
         "gridCol": 2,
-        "type": "T_JUNCTION",
+        "type": "CROSS",
         "cells": [
           [
             {
@@ -1789,11 +1787,10 @@ export const PRACTICE_TEST_2_PUZZLES: PuzzleDefinition[] = [
             },
             {
               "active": true,
-              "arrowDirection": "UP_LEFT"
+              "arrowDirection": "UP"
             },
             {
-              "active": true,
-              "arrowDirection": "LEFT"
+              "active": true
             }
           ],
           [
@@ -1801,7 +1798,8 @@ export const PRACTICE_TEST_2_PUZZLES: PuzzleDefinition[] = [
               "active": false
             },
             {
-              "active": false
+              "active": true,
+              "arrowDirection": "UP"
             },
             {
               "active": false
@@ -1857,6 +1855,182 @@ export const PRACTICE_TEST_2_PUZZLES: PuzzleDefinition[] = [
         "id": "T11",
         "gridRow": 1,
         "gridCol": 1,
+        "type": "CORNER",
+        "cells": [
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": false
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP_LEFT"
+            },
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": false
+            },
+            {
+              "active": false
+            }
+          ]
+        ]
+      },
+      {
+        "id": "T12",
+        "gridRow": 1,
+        "gridCol": 2,
+        "type": "T_JUNCTION",
+        "cells": [
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": false
+            }
+          ],
+          [
+            {
+              "active": true
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP_LEFT"
+            },
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": false
+            },
+            {
+              "active": false
+            }
+          ]
+        ]
+      },
+      {
+        "id": "T20",
+        "gridRow": 2,
+        "gridCol": 0,
+        "type": "CORNER",
+        "cells": [
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": false
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP_LEFT"
+            },
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": false
+            },
+            {
+              "active": false
+            }
+          ]
+        ]
+      },
+      {
+        "id": "T21",
+        "gridRow": 2,
+        "gridCol": 1,
+        "type": "T_JUNCTION",
+        "cells": [
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": false
+            }
+          ],
+          [
+            {
+              "active": true
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP_LEFT"
+            },
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": false
+            },
+            {
+              "active": false
+            }
+          ]
+        ]
+      },
+      {
+        "id": "T22",
+        "gridRow": 2,
+        "gridCol": 2,
         "type": "STRAIGHT",
         "cells": [
           [
@@ -1878,6 +2052,379 @@ export const PRACTICE_TEST_2_PUZZLES: PuzzleDefinition[] = [
             {
               "active": true,
               "arrowDirection": "LEFT"
+            },
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": false
+            },
+            {
+              "active": false
+            }
+          ]
+        ]
+      }
+    ],
+    "initialTileStates": {
+      "T00": {
+        "rotation": 1,
+        "flipState": 1,
+        "mode": 1,
+        "flipped": true,
+        "directionReversed": true
+      },
+      "T01": {
+        "rotation": 3,
+        "flipState": 1,
+        "mode": 1,
+        "flipped": true,
+        "directionReversed": true
+      },
+      "T02": {
+        "rotation": 2,
+        "flipState": 8,
+        "mode": 8,
+        "flipped": false,
+        "directionReversed": false
+      },
+      "T10": {
+        "rotation": 1,
+        "flipState": 1,
+        "mode": 1,
+        "flipped": true,
+        "directionReversed": true
+      },
+      "T11": {
+        "rotation": 0,
+        "flipState": 0,
+        "mode": 0,
+        "flipped": false,
+        "directionReversed": false
+      },
+      "T12": {
+        "rotation": 2,
+        "flipState": 4,
+        "mode": 4,
+        "flipped": false,
+        "directionReversed": false
+      },
+      "T20": {
+        "rotation": 2,
+        "flipState": 0,
+        "mode": 0,
+        "flipped": false,
+        "directionReversed": false
+      },
+      "T21": {
+        "rotation": 0,
+        "flipState": 1,
+        "mode": 1,
+        "flipped": true,
+        "directionReversed": true
+      },
+      "T22": {
+        "rotation": 1,
+        "flipState": 0,
+        "mode": 0,
+        "flipped": false,
+        "directionReversed": false
+      }
+    },
+    "solution": {
+      "minMoves": 24,
+      "tileStates": {
+        "T00": {
+          "rotation": 2,
+          "flipState": 1,
+          "mode": 1,
+          "flipped": true,
+          "directionReversed": true
+        },
+        "T01": {
+          "rotation": 0,
+          "flipState": 1,
+          "mode": 1,
+          "flipped": true,
+          "directionReversed": true
+        },
+        "T02": {
+          "rotation": 2,
+          "flipState": 5,
+          "mode": 5,
+          "flipped": true,
+          "directionReversed": true
+        },
+        "T10": {
+          "rotation": 1,
+          "flipState": 4,
+          "mode": 4,
+          "flipped": false,
+          "directionReversed": false
+        },
+        "T11": {
+          "rotation": 2,
+          "flipState": 0,
+          "mode": 0,
+          "flipped": false,
+          "directionReversed": false
+        },
+        "T12": {
+          "rotation": 3,
+          "flipState": 5,
+          "mode": 5,
+          "flipped": true,
+          "directionReversed": true
+        },
+        "T20": {
+          "rotation": 1,
+          "flipState": 0,
+          "mode": 0,
+          "flipped": false,
+          "directionReversed": false
+        },
+        "T21": {
+          "rotation": 1,
+          "flipState": 2,
+          "mode": 2,
+          "flipped": false,
+          "directionReversed": false
+        },
+        "T22": {
+          "rotation": 2,
+          "flipState": 0,
+          "mode": 0,
+          "flipped": false,
+          "directionReversed": false
+        }
+      }
+    }
+  },
+  {
+    "id": "practice-3-q5",
+    "gridRows": 9,
+    "gridCols": 9,
+    "tileRows": 3,
+    "tileCols": 3,
+    "tileSize": 3,
+    "startPos": {
+      "row": 7,
+      "col": 0,
+      "entrySide": "LEFT"
+    },
+    "destinationPos": {
+      "row": 7,
+      "col": 8,
+      "exitSide": "RIGHT"
+    },
+    "tiles": [
+      {
+        "id": "T00",
+        "gridRow": 0,
+        "gridCol": 0,
+        "type": "CROSS",
+        "cells": [
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": false
+            }
+          ],
+          [
+            {
+              "active": true
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": true
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": false
+            }
+          ]
+        ]
+      },
+      {
+        "id": "T01",
+        "gridRow": 0,
+        "gridCol": 1,
+        "type": "CROSS",
+        "cells": [
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": false
+            }
+          ],
+          [
+            {
+              "active": true
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": true
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": false
+            }
+          ]
+        ]
+      },
+      {
+        "id": "T02",
+        "gridRow": 0,
+        "gridCol": 2,
+        "type": "T_JUNCTION",
+        "cells": [
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": false
+            }
+          ],
+          [
+            {
+              "active": true
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP_LEFT"
+            },
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": false
+            },
+            {
+              "active": false
+            }
+          ]
+        ]
+      },
+      {
+        "id": "T10",
+        "gridRow": 1,
+        "gridCol": 0,
+        "type": "CORNER",
+        "cells": [
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": false
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP_LEFT"
+            },
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": false
+            },
+            {
+              "active": false
+            }
+          ]
+        ]
+      },
+      {
+        "id": "T11",
+        "gridRow": 1,
+        "gridCol": 1,
+        "type": "CORNER",
+        "cells": [
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": false
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP_LEFT"
             },
             {
               "active": true,
@@ -1989,7 +2536,7 @@ export const PRACTICE_TEST_2_PUZZLES: PuzzleDefinition[] = [
         "id": "T21",
         "gridRow": 2,
         "gridCol": 1,
-        "type": "CROSS",
+        "type": "T_JUNCTION",
         "cells": [
           [
             {
@@ -2009,10 +2556,11 @@ export const PRACTICE_TEST_2_PUZZLES: PuzzleDefinition[] = [
             },
             {
               "active": true,
-              "arrowDirection": "UP"
+              "arrowDirection": "UP_LEFT"
             },
             {
-              "active": true
+              "active": true,
+              "arrowDirection": "LEFT"
             }
           ],
           [
@@ -2020,8 +2568,7 @@ export const PRACTICE_TEST_2_PUZZLES: PuzzleDefinition[] = [
               "active": false
             },
             {
-              "active": true,
-              "arrowDirection": "UP"
+              "active": false
             },
             {
               "active": false
@@ -2033,7 +2580,7 @@ export const PRACTICE_TEST_2_PUZZLES: PuzzleDefinition[] = [
         "id": "T22",
         "gridRow": 2,
         "gridCol": 2,
-        "type": "CROSS",
+        "type": "T_JUNCTION",
         "cells": [
           [
             {
@@ -2053,10 +2600,11 @@ export const PRACTICE_TEST_2_PUZZLES: PuzzleDefinition[] = [
             },
             {
               "active": true,
-              "arrowDirection": "UP"
+              "arrowDirection": "UP_LEFT"
             },
             {
-              "active": true
+              "active": true,
+              "arrowDirection": "LEFT"
             }
           ],
           [
@@ -2064,8 +2612,7 @@ export const PRACTICE_TEST_2_PUZZLES: PuzzleDefinition[] = [
               "active": false
             },
             {
-              "active": true,
-              "arrowDirection": "UP"
+              "active": false
             },
             {
               "active": false
@@ -2076,56 +2623,56 @@ export const PRACTICE_TEST_2_PUZZLES: PuzzleDefinition[] = [
     ],
     "initialTileStates": {
       "T00": {
-        "rotation": 2,
-        "flipState": 0,
-        "mode": 0,
-        "flipped": false,
-        "directionReversed": false
+        "rotation": 1,
+        "flipState": 11,
+        "mode": 11,
+        "flipped": true,
+        "directionReversed": true
       },
       "T01": {
-        "rotation": 2,
-        "flipState": 0,
-        "mode": 0,
-        "flipped": false,
-        "directionReversed": false
+        "rotation": 3,
+        "flipState": 3,
+        "mode": 3,
+        "flipped": true,
+        "directionReversed": true
       },
       "T02": {
-        "rotation": 3,
-        "flipState": 0,
-        "mode": 0,
-        "flipped": false,
-        "directionReversed": false
+        "rotation": 0,
+        "flipState": 1,
+        "mode": 1,
+        "flipped": true,
+        "directionReversed": true
       },
       "T10": {
-        "rotation": 3,
+        "rotation": 0,
         "flipState": 1,
         "mode": 1,
         "flipped": true,
         "directionReversed": true
       },
       "T11": {
-        "rotation": 3,
-        "flipState": 0,
-        "mode": 0,
-        "flipped": false,
-        "directionReversed": false
-      },
-      "T12": {
-        "rotation": 1,
+        "rotation": 0,
         "flipState": 1,
         "mode": 1,
         "flipped": true,
         "directionReversed": true
       },
+      "T12": {
+        "rotation": 2,
+        "flipState": 0,
+        "mode": 0,
+        "flipped": false,
+        "directionReversed": false
+      },
       "T20": {
         "rotation": 0,
-        "flipState": 9,
-        "mode": 9,
+        "flipState": 7,
+        "mode": 7,
         "flipped": true,
         "directionReversed": true
       },
       "T21": {
-        "rotation": 1,
+        "rotation": 0,
         "flipState": 4,
         "mode": 4,
         "flipped": false,
@@ -2133,624 +2680,75 @@ export const PRACTICE_TEST_2_PUZZLES: PuzzleDefinition[] = [
       },
       "T22": {
         "rotation": 0,
-        "flipState": 1,
-        "mode": 1,
+        "flipState": 3,
+        "mode": 3,
         "flipped": true,
         "directionReversed": true
       }
     },
     "solution": {
-      "minMoves": 39,
+      "minMoves": 27,
       "tileStates": {
         "T00": {
           "rotation": 2,
-          "flipState": 1,
-          "mode": 1,
+          "flipState": 7,
+          "mode": 7,
           "flipped": true,
           "directionReversed": true
         },
         "T01": {
-          "rotation": 1,
-          "flipState": 0,
-          "mode": 0,
-          "flipped": false,
-          "directionReversed": false
-        },
-        "T02": {
-          "rotation": 2,
-          "flipState": 0,
-          "mode": 0,
-          "flipped": false,
-          "directionReversed": false
-        },
-        "T10": {
           "rotation": 1,
           "flipState": 3,
           "mode": 3,
           "flipped": true,
           "directionReversed": true
         },
-        "T11": {
-          "rotation": 1,
-          "flipState": 1,
-          "mode": 1,
-          "flipped": true,
-          "directionReversed": true
-        },
-        "T12": {
-          "rotation": 3,
-          "flipState": 1,
-          "mode": 1,
-          "flipped": true,
-          "directionReversed": true
-        },
-        "T20": {
-          "rotation": 1,
-          "flipState": 5,
-          "mode": 5,
-          "flipped": true,
-          "directionReversed": true
-        },
-        "T21": {
-          "rotation": 1,
-          "flipState": 10,
-          "mode": 10,
-          "flipped": false,
-          "directionReversed": false
-        },
-        "T22": {
-          "rotation": 3,
-          "flipState": 8,
-          "mode": 8,
-          "flipped": false,
-          "directionReversed": false
-        }
-      }
-    }
-  },
-  {
-    "id": "practice-2-q5",
-    "gridRows": 9,
-    "gridCols": 9,
-    "tileRows": 3,
-    "tileCols": 3,
-    "tileSize": 3,
-    "startPos": {
-      "row": 4,
-      "col": 0,
-      "entrySide": "LEFT"
-    },
-    "destinationPos": {
-      "row": 1,
-      "col": 8,
-      "exitSide": "RIGHT"
-    },
-    "tiles": [
-      {
-        "id": "T00",
-        "gridRow": 0,
-        "gridCol": 0,
-        "type": "CORNER",
-        "cells": [
-          [
-            {
-              "active": false
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": false
-            }
-          ],
-          [
-            {
-              "active": false
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP_LEFT"
-            },
-            {
-              "active": true,
-              "arrowDirection": "LEFT"
-            }
-          ],
-          [
-            {
-              "active": false
-            },
-            {
-              "active": false
-            },
-            {
-              "active": false
-            }
-          ]
-        ]
-      },
-      {
-        "id": "T01",
-        "gridRow": 0,
-        "gridCol": 1,
-        "type": "T_JUNCTION",
-        "cells": [
-          [
-            {
-              "active": false
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": false
-            }
-          ],
-          [
-            {
-              "active": true
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP_LEFT"
-            },
-            {
-              "active": true,
-              "arrowDirection": "LEFT"
-            }
-          ],
-          [
-            {
-              "active": false
-            },
-            {
-              "active": false
-            },
-            {
-              "active": false
-            }
-          ]
-        ]
-      },
-      {
-        "id": "T02",
-        "gridRow": 0,
-        "gridCol": 2,
-        "type": "T_JUNCTION",
-        "cells": [
-          [
-            {
-              "active": false
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": false
-            }
-          ],
-          [
-            {
-              "active": true
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP_LEFT"
-            },
-            {
-              "active": true,
-              "arrowDirection": "LEFT"
-            }
-          ],
-          [
-            {
-              "active": false
-            },
-            {
-              "active": false
-            },
-            {
-              "active": false
-            }
-          ]
-        ]
-      },
-      {
-        "id": "T10",
-        "gridRow": 1,
-        "gridCol": 0,
-        "type": "CROSS",
-        "cells": [
-          [
-            {
-              "active": false
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": false
-            }
-          ],
-          [
-            {
-              "active": true
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": true
-            }
-          ],
-          [
-            {
-              "active": false
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": false
-            }
-          ]
-        ]
-      },
-      {
-        "id": "T11",
-        "gridRow": 1,
-        "gridCol": 1,
-        "type": "CROSS",
-        "cells": [
-          [
-            {
-              "active": false
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": false
-            }
-          ],
-          [
-            {
-              "active": true
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": true
-            }
-          ],
-          [
-            {
-              "active": false
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": false
-            }
-          ]
-        ]
-      },
-      {
-        "id": "T12",
-        "gridRow": 1,
-        "gridCol": 2,
-        "type": "CROSS",
-        "cells": [
-          [
-            {
-              "active": false
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": false
-            }
-          ],
-          [
-            {
-              "active": true
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": true
-            }
-          ],
-          [
-            {
-              "active": false
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": false
-            }
-          ]
-        ]
-      },
-      {
-        "id": "T20",
-        "gridRow": 2,
-        "gridCol": 0,
-        "type": "CROSS",
-        "cells": [
-          [
-            {
-              "active": false
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": false
-            }
-          ],
-          [
-            {
-              "active": true
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": true
-            }
-          ],
-          [
-            {
-              "active": false
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": false
-            }
-          ]
-        ]
-      },
-      {
-        "id": "T21",
-        "gridRow": 2,
-        "gridCol": 1,
-        "type": "STRAIGHT",
-        "cells": [
-          [
-            {
-              "active": false
-            },
-            {
-              "active": false
-            },
-            {
-              "active": false
-            }
-          ],
-          [
-            {
-              "active": true,
-              "arrowDirection": "LEFT"
-            },
-            {
-              "active": true,
-              "arrowDirection": "LEFT"
-            },
-            {
-              "active": true,
-              "arrowDirection": "LEFT"
-            }
-          ],
-          [
-            {
-              "active": false
-            },
-            {
-              "active": false
-            },
-            {
-              "active": false
-            }
-          ]
-        ]
-      },
-      {
-        "id": "T22",
-        "gridRow": 2,
-        "gridCol": 2,
-        "type": "T_JUNCTION",
-        "cells": [
-          [
-            {
-              "active": false
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": false
-            }
-          ],
-          [
-            {
-              "active": true
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP_LEFT"
-            },
-            {
-              "active": true,
-              "arrowDirection": "LEFT"
-            }
-          ],
-          [
-            {
-              "active": false
-            },
-            {
-              "active": false
-            },
-            {
-              "active": false
-            }
-          ]
-        ]
-      }
-    ],
-    "initialTileStates": {
-      "T00": {
-        "rotation": 0,
-        "flipState": 0,
-        "mode": 0,
-        "flipped": false,
-        "directionReversed": false
-      },
-      "T01": {
-        "rotation": 0,
-        "flipState": 1,
-        "mode": 1,
-        "flipped": true,
-        "directionReversed": true
-      },
-      "T02": {
-        "rotation": 2,
-        "flipState": 2,
-        "mode": 2,
-        "flipped": false,
-        "directionReversed": false
-      },
-      "T10": {
-        "rotation": 2,
-        "flipState": 2,
-        "mode": 2,
-        "flipped": false,
-        "directionReversed": false
-      },
-      "T11": {
-        "rotation": 3,
-        "flipState": 0,
-        "mode": 0,
-        "flipped": false,
-        "directionReversed": false
-      },
-      "T12": {
-        "rotation": 2,
-        "flipState": 3,
-        "mode": 3,
-        "flipped": true,
-        "directionReversed": true
-      },
-      "T20": {
-        "rotation": 3,
-        "flipState": 6,
-        "mode": 6,
-        "flipped": false,
-        "directionReversed": false
-      },
-      "T21": {
-        "rotation": 3,
-        "flipState": 0,
-        "mode": 0,
-        "flipped": false,
-        "directionReversed": false
-      },
-      "T22": {
-        "rotation": 2,
-        "flipState": 3,
-        "mode": 3,
-        "flipped": true,
-        "directionReversed": true
-      }
-    },
-    "solution": {
-      "minMoves": 37,
-      "tileStates": {
-        "T00": {
-          "rotation": 2,
-          "flipState": 0,
-          "mode": 0,
-          "flipped": false,
-          "directionReversed": false
-        },
-        "T01": {
-          "rotation": 1,
-          "flipState": 1,
-          "mode": 1,
-          "flipped": true,
-          "directionReversed": true
-        },
         "T02": {
-          "rotation": 0,
+          "rotation": 1,
           "flipState": 5,
           "mode": 5,
           "flipped": true,
           "directionReversed": true
         },
         "T10": {
+          "rotation": 0,
+          "flipState": 1,
+          "mode": 1,
+          "flipped": true,
+          "directionReversed": true
+        },
+        "T11": {
           "rotation": 1,
           "flipState": 0,
           "mode": 0,
           "flipped": false,
           "directionReversed": false
         },
-        "T11": {
-          "rotation": 3,
-          "flipState": 11,
-          "mode": 11,
+        "T12": {
+          "rotation": 2,
+          "flipState": 1,
+          "mode": 1,
           "flipped": true,
           "directionReversed": true
         },
-        "T12": {
-          "rotation": 3,
-          "flipState": 6,
-          "mode": 6,
-          "flipped": false,
-          "directionReversed": false
-        },
         "T20": {
+          "rotation": 1,
+          "flipState": 1,
+          "mode": 1,
+          "flipped": true,
+          "directionReversed": true
+        },
+        "T21": {
           "rotation": 0,
           "flipState": 4,
           "mode": 4,
           "flipped": false,
           "directionReversed": false
         },
-        "T21": {
-          "rotation": 1,
-          "flipState": 0,
-          "mode": 0,
-          "flipped": false,
-          "directionReversed": false
-        },
         "T22": {
-          "rotation": 1,
-          "flipState": 0,
-          "mode": 0,
+          "rotation": 0,
+          "flipState": 4,
+          "mode": 4,
           "flipped": false,
           "directionReversed": false
         }
@@ -2759,297 +2757,11 @@ export const PRACTICE_TEST_2_PUZZLES: PuzzleDefinition[] = [
   }
 ];
 
-export const PRACTICE_2_PUZZLE = PRACTICE_TEST_2_PUZZLES[0];
+export const PRACTICE_3_PUZZLE = PRACTICE_TEST_3_PUZZLES[0];
 
 /**
- * Returns the 5 fixed Practice Test 2 puzzles in deterministic order.
+ * Returns the 5 fixed Practice Test 3 puzzles in deterministic order.
  */
-export function getPractice2Questions(): PuzzleDefinition[] {
-  return [...PRACTICE_TEST_2_PUZZLES];
-}
-
-export function createSeededRng(seed: number): () => number {
-  let s = seed % 2147483647;
-  if (s <= 0) s += 2147483646;
-  return () => {
-    s = (s * 16807) % 2147483647;
-    return (s - 1) / 2147483646;
-  };
-}
-
-export function getPuzzleSignature(puzzle: PuzzleDefinition): string {
-  const routeSig = `${puzzle.startPos.row}->${puzzle.destinationPos.row}`;
-  const tileSig = puzzle.tiles
-    .map((t) => {
-      const sol = puzzle.solution?.tileStates[t.id];
-      const init = puzzle.initialTileStates[t.id];
-      return `${t.id}:${t.type}:${sol?.rotation ?? 0},${sol?.flipState ?? sol?.mode ?? 0}:${init?.rotation ?? 0},${init?.flipState ?? init?.mode ?? 0}`;
-    })
-    .join(";");
-  return `${routeSig}|${tileSig}`;
-}
-
-interface RouteStep {
-  gridRow: number;
-  gridCol: number;
-  enterPort: TilePort;
-  exitPort: TilePort;
-}
-
-function generateRandomTileRoute(
-  startTileRow: number,
-  destTileRow: number,
-  rng: () => number
-): RouteStep[] | null {
-  const visited = new Set<string>();
-  const path: RouteStep[] = [];
-
-  function dfs(r: number, c: number, enterPort: TilePort): boolean {
-    const key = `${r},${c}`;
-    visited.add(key);
-
-    if (r === destTileRow && c === 2) {
-      path.push({ gridRow: r, gridCol: c, enterPort, exitPort: "RIGHT" });
-      return true;
-    }
-
-    const candidates: { nr: number; nc: number; exitPort: TilePort; nextEnter: TilePort }[] = [
-      { nr: r, nc: c + 1, exitPort: "RIGHT", nextEnter: "LEFT" },
-      { nr: r - 1, nc: c, exitPort: "TOP", nextEnter: "BOTTOM" },
-      { nr: r + 1, nc: c, exitPort: "BOTTOM", nextEnter: "TOP" },
-      { nr: r, nc: c - 1, exitPort: "LEFT", nextEnter: "RIGHT" },
-    ];
-
-    const validMoves = candidates.filter(
-      (m) => m.nr >= 0 && m.nr < 3 && m.nc >= 0 && m.nc < 3 && !visited.has(`${m.nr},${m.nc}`)
-    );
-
-    for (let i = validMoves.length - 1; i > 0; i--) {
-      const j = Math.floor(rng() * (i + 1));
-      [validMoves[i], validMoves[j]] = [validMoves[j], validMoves[i]];
-    }
-
-    for (const move of validMoves) {
-      path.push({ gridRow: r, gridCol: c, enterPort, exitPort: move.exitPort });
-      if (dfs(move.nr, move.nc, move.nextEnter)) {
-        return true;
-      }
-      path.pop();
-    }
-
-    visited.delete(key);
-    return false;
-  }
-
-  const success = dfs(startTileRow, 0, "LEFT");
-  return success ? path : null;
-}
-
-function getMatchingTileConfigs(
-  gridRow: number,
-  gridCol: number,
-  enterPort: TilePort,
-  exitPort: TilePort
-): { type: TileType; state: TileState }[] {
-  const configs: { type: TileType; state: TileState }[] = [];
-  const tileTypes: TileType[] = ["STRAIGHT", "CORNER", "T_JUNCTION", "CROSS"];
-
-  for (const type of tileTypes) {
-    const maxFlips = SHAPE_FLIP_STATES_COUNT[type] || 2;
-    for (let flipState = 0; flipState < maxFlips; flipState++) {
-      for (const rotation of [0, 1, 2, 3] as (0 | 1 | 2 | 3)[]) {
-        const dummyTile: TileDefinition = {
-          id: `T${gridRow}${gridCol}`,
-          gridRow,
-          gridCol,
-          type,
-          cells: [],
-        };
-        const st: TileState = {
-          rotation,
-          flipState,
-          mode: flipState,
-          flipped: flipState % 2 === 1,
-          directionReversed: flipState % 2 === 1,
-        };
-        const ports = getEffectivePorts(dummyTile, st);
-        if (ports.enter === enterPort && ports.exit === exitPort) {
-          configs.push({ type, state: st });
-        }
-      }
-    }
-  }
-  return configs;
-}
-
-export function generatePractice2Question(
-  questionIndex: number,
-  rng: () => number = Math.random,
-  existingSignatures: Set<string> = new Set()
-): PuzzleDefinition {
-  const MAX_ATTEMPTS = 50;
-  const tileTypesList: TileType[] = ["STRAIGHT", "CORNER", "T_JUNCTION", "CROSS"];
-
-  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    const startTileRow = Math.floor(rng() * 3);
-    const destTileRow = Math.floor(rng() * 3);
-
-    const route = generateRandomTileRoute(startTileRow, destTileRow, rng);
-    if (!route || route.length === 0) continue;
-
-    const routeMap = new Map<string, RouteStep>();
-    for (const step of route) {
-      routeMap.set(`${step.gridRow},${step.gridCol}`, step);
-    }
-
-    const tiles: TileDefinition[] = [];
-    const solutionTileStates: Record<string, TileState> = {};
-    let generationFailed = false;
-
-    for (let r = 0; r < 3; r++) {
-      for (let c = 0; c < 3; c++) {
-        const tileId = `T${r}${c}`;
-        const step = routeMap.get(`${r},${c}`);
-
-        let type: TileType;
-        let solState: TileState;
-
-        if (step) {
-          const matchingConfigs = getMatchingTileConfigs(r, c, step.enterPort, step.exitPort);
-          if (matchingConfigs.length === 0) {
-            generationFailed = true;
-            break;
-          }
-          const chosen = matchingConfigs[Math.floor(rng() * matchingConfigs.length)];
-          type = chosen.type;
-          solState = chosen.state;
-        } else {
-          type = tileTypesList[Math.floor(rng() * tileTypesList.length)];
-          const rotation = Math.floor(rng() * 4) as 0 | 1 | 2 | 3;
-          const maxFlips = SHAPE_FLIP_STATES_COUNT[type] || 2;
-          const flipState = Math.floor(rng() * maxFlips);
-          solState = {
-            rotation,
-            flipState,
-            mode: flipState,
-            flipped: flipState % 2 === 1,
-            directionReversed: flipState % 2 === 1,
-          };
-        }
-
-        const dummyTile = { id: tileId, gridRow: r, gridCol: c, type, cells: [] };
-        const baseCells = getEffectiveTileCells(dummyTile as TileDefinition, { rotation: 0, flipState: 0 });
-
-        tiles.push({
-          id: tileId,
-          gridRow: r,
-          gridCol: c,
-          type,
-          cells: baseCells,
-        });
-        solutionTileStates[tileId] = solState;
-      }
-      if (generationFailed) break;
-    }
-
-    if (generationFailed) continue;
-
-    const startPos = { row: startTileRow * 3 + 1, col: 0, entrySide: "LEFT" as const };
-    const destinationPos = { row: destTileRow * 3 + 1, col: 8, exitSide: "RIGHT" as const };
-
-    const candidatePuzzle: PuzzleDefinition = {
-      id: `practice-2-q${questionIndex + 1}`,
-      gridRows: 9,
-      gridCols: 9,
-      tileRows: 3,
-      tileCols: 3,
-      tileSize: 3,
-      startPos,
-      destinationPos,
-      tiles,
-      initialTileStates: {},
-      solution: {
-        minMoves: 0,
-        tileStates: solutionTileStates,
-      },
-    };
-
-    const solvedValidation = validateRoute(candidatePuzzle, solutionTileStates);
-    if (!solvedValidation.isValid || solvedValidation.visitedPath.length === 0) {
-      continue;
-    }
-
-    const initialTileStates: Record<string, TileState> = {};
-    let scrambledMoves = 0;
-
-    for (const t of tiles) {
-      const sol = solutionTileStates[t.id];
-      const rotDelta = Math.floor(rng() * 4) as 0 | 1 | 2 | 3;
-      const tileType = t.type || "STRAIGHT";
-      const maxFlips = SHAPE_FLIP_STATES_COUNT[tileType] || 2;
-      const curFlip = getTileFlipState(tileType, sol);
-      const flipDelta = Math.floor(rng() * maxFlips);
-      const newFlip = (curFlip + flipDelta) % maxFlips;
-      if (flipDelta > 0) scrambledMoves += flipDelta;
-
-      const rotation = (((sol.rotation + rotDelta) % 4) as 0 | 1 | 2 | 3);
-      if (rotDelta > 0) scrambledMoves += rotDelta;
-
-      initialTileStates[t.id] = {
-        rotation,
-        flipState: newFlip,
-        mode: newFlip,
-        flipped: newFlip % 2 === 1,
-        directionReversed: newFlip % 2 === 1,
-      };
-    }
-
-    candidatePuzzle.initialTileStates = initialTileStates;
-
-    let initValidation = validateRoute(candidatePuzzle, initialTileStates);
-    let extraScrambleAttempts = 0;
-    while ((initValidation.isValid || scrambledMoves < 2) && extraScrambleAttempts < 10) {
-      const routeStep = route[Math.floor(rng() * route.length)];
-      const targetTileId = `T${routeStep.gridRow}${routeStep.gridCol}`;
-      const cur = initialTileStates[targetTileId];
-      initialTileStates[targetTileId] = {
-        ...cur,
-        rotation: (((cur.rotation + 1) % 4) as 0 | 1 | 2 | 3),
-      };
-      scrambledMoves += 1;
-      initValidation = validateRoute(candidatePuzzle, initialTileStates);
-      extraScrambleAttempts++;
-    }
-
-    if (initValidation.isValid) {
-      continue;
-    }
-
-    if (candidatePuzzle.solution) {
-      candidatePuzzle.solution.minMoves = scrambledMoves;
-    }
-
-    const sig = getPuzzleSignature(candidatePuzzle);
-    if (existingSignatures.has(sig)) {
-      continue;
-    }
-
-    existingSignatures.add(sig);
-    return candidatePuzzle;
-  }
-
-  throw new Error(`Failed to generate a valid, distinct Practice Test 2 question for index ${questionIndex} within attempt limits.`);
-}
-
-export function generatePractice2Questions(count: number = 5, seed?: number): PuzzleDefinition[] {
-  const rng = seed !== undefined ? createSeededRng(seed) : Math.random;
-  const existingSignatures = new Set<string>();
-  const questions: PuzzleDefinition[] = [];
-
-  for (let i = 0; i < count; i++) {
-    const question = generatePractice2Question(i, rng, existingSignatures);
-    questions.push(question);
-  }
-
-  return questions;
+export function getPractice3Questions(): PuzzleDefinition[] {
+  return [...PRACTICE_TEST_3_PUZZLES];
 }
