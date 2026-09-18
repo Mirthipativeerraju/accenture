@@ -41,6 +41,11 @@ export default function PathFinderPracticeSetup() {
                 onClick={() => setSelectedVariant(variant.id)}
               >
                 <div className="font-bold text-lg">{variant.label}</div>
+                <div className="text-sm text-muted-foreground">
+      {variant.id === "full-mock-test"
+        ? "5 Questions • Mixed Difficulty"
+        : "5 Questions • Easy"}
+    </div>
               </Button>
             ))}
           </div>

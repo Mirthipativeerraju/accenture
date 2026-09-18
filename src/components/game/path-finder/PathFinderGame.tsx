@@ -30,6 +30,10 @@ import {
 } from "@/lib/games/path-finder/practice-3-puzzle";
 
 import {
+  getFullMockQuestions,
+} from "@/lib/games/path-finder/full-mock-puzzle";
+
+import {
   PuzzleDefinition,
   TileState,
   ArrowDirection,
@@ -609,6 +613,14 @@ export function PathFinderGame({
         return PRACTICE_TEST_3_PUZZLES;
       }
 
+      if (
+        variant === "full-mock-test" ||
+        variant === "full-mock" ||
+        variant === "mock"
+      ) {
+        return getFullMockQuestions();
+      }
+
       return generatePractice2Questions(
         5
       );
@@ -711,7 +723,8 @@ export function PathFinderGame({
     useState<{
       type:
         | "success"
-        | "error";
+        | "error"
+        | "timeout";
 
       message: string;
     } | null>(null);
@@ -892,9 +905,12 @@ export function PathFinderGame({
                 interval
               );
 
-              setStage(
-                "TIMEOUT"
-              );
+              setIsSubmitting(true);
+  setSelectedTileId(null);
+  setFeedback({
+    type: "timeout",
+    message: "Time Up",
+  });
 
               return 0;
             }
@@ -2074,7 +2090,7 @@ animationFrameRef.current = null;
                   <div className="text-sm font-medium text-slate-700">
                     {feedback.type === "success"
                       ? `Valid route - ${arrowsTravelled} arrows travelled`
-                      : "Invalid route"}
+                      : feedback.type === "timeout" ? "Time Up" : "Invalid route"}
                   </div>
 
                   <button
