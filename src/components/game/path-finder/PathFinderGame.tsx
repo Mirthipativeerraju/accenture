@@ -104,18 +104,26 @@ function cellToPixel(
   cell: {
     r: number;
     c: number;
-  }
+  },
+  puzzle: PuzzleDefinition
 ) {
+  const cellSize =
+    BOARD_SIZE /
+    puzzle.gridCols;
+
+  const cellCenter =
+    cellSize / 2;
+
   return {
     x:
       cell.c *
-        CELL_SIZE +
-      CELL_CENTER,
+        cellSize +
+      cellCenter,
 
     y:
       cell.r *
-        CELL_SIZE +
-      CELL_CENTER,
+        cellSize +
+      cellCenter,
   };
 }
 
@@ -130,15 +138,23 @@ function cellToPixel(
 // ============================================================================
 
 function getStartRocketPosition(
-  row: number
+  row: number,
+  puzzle: PuzzleDefinition
 ) {
+  const cellSize =
+    BOARD_SIZE /
+    puzzle.gridCols;
+
+  const cellCenter =
+    cellSize / 2;
+
   return {
-    x: -CELL_CENTER,
+    x: -cellCenter,
 
     y:
       row *
-        CELL_SIZE +
-      CELL_CENTER,
+        cellSize +
+      cellCenter,
   };
 }
 
@@ -682,6 +698,11 @@ export function PathFinderGame({
     timeRemaining,
     setTimeRemaining,
   ] = useState(240);
+
+  const [
+  arrowsTravelled,
+  setArrowsTravelled,
+] = useState(0);
 
   const [
     feedback,
@@ -1239,13 +1260,14 @@ export function PathFinderGame({
 
         const startPosition =
           getStartRocketPosition(
-            currentPuzzle.startPos.row
+            currentPuzzle.startPos.row,
+            currentPuzzle
           );
 
         const animationPoints = [
           startPosition,
           ...invalidPath.map(
-            cellToPixel
+            (cell) => cellToPixel(cell, currentPuzzle)
           ),
         ];
 
@@ -1471,6 +1493,11 @@ export function PathFinderGame({
 
       const path =
         validationResult.visitedPath;
+      
+      const arrowsTravelled = Math.max(
+  0,
+  path.length - 1
+);
 
       console.log(
         "[PATHFINDER] REAL VISUAL PATH:",
@@ -1529,15 +1556,15 @@ export function PathFinderGame({
 
       const startPosition =
         getStartRocketPosition(
-          currentPuzzle.startPos
-            .row
+          currentPuzzle.startPos.row,
+          currentPuzzle
         );
 
       const animationPoints = [
         startPosition,
 
         ...path.map(
-          cellToPixel
+          (cell) => cellToPixel(cell, currentPuzzle)
         ),
       ];
 
@@ -1668,6 +1695,10 @@ export function PathFinderGame({
             const finalAngle =
               currentAngle;
 
+              setArrowsTravelled(
+  Math.max(0, path.length - 1)
+);
+
             setAnimatingRocket(
               {
                 x: finalPoint.x,
@@ -1682,34 +1713,8 @@ export function PathFinderGame({
               message:
                 "Valid Route",
             });
-
-            animationTimeoutRef.current =
-              setTimeout(() => {
-                setAnimatingRocket(
-                  null
-                );
-
-                if (
-                  currentQuestionIndex +
-                    1 <
-                  puzzles.length
-                ) {
-                  loadQuestion(
-                    currentQuestionIndex +
-                      1
-                  );
-
-                  return;
-                }
-
-                setStage(
-                  "COMPLETED"
-                );
-
-                setIsSubmitting(
-                  false
-                );
-              }, 1000);
+setIsSubmitting(true);
+animationFrameRef.current = null;
 
             return;
           }
@@ -2068,7 +2073,7 @@ export function PathFinderGame({
                 <div className="w-[calc(100%-24px)] max-w-[330px] rounded-md border border-slate-300 bg-white px-6 py-5 text-center shadow-lg">
                   <div className="text-sm font-medium text-slate-700">
                     {feedback.type === "success"
-                      ? "Valid route - well done!"
+                      ? `Valid route - ${arrowsTravelled} arrows travelled`
                       : "Invalid route"}
                   </div>
 

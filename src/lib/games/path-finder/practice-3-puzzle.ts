@@ -12,10 +12,10 @@ import { PuzzleDefinition } from "./types";
 export const PRACTICE_TEST_3_PUZZLES: PuzzleDefinition[] = [
   {
     "id": "practice-3-q1",
-    "gridRows": 9,
-    "gridCols": 9,
-    "tileRows": 3,
-    "tileCols": 3,
+    "gridRows": 12,
+    "gridCols": 12,
+    "tileRows": 4,
+    "tileCols": 4,
     "tileSize": 3,
     "startPos": {
       "row": 1,
@@ -23,8 +23,8 @@ export const PRACTICE_TEST_3_PUZZLES: PuzzleDefinition[] = [
       "entrySide": "LEFT"
     },
     "destinationPos": {
-      "row": 4,
-      "col": 8,
+      "row": 10,
+      "col": 11,
       "exitSide": "RIGHT"
     },
     "tiles": [
@@ -120,6 +120,50 @@ export const PRACTICE_TEST_3_PUZZLES: PuzzleDefinition[] = [
         "id": "T02",
         "gridRow": 0,
         "gridCol": 2,
+        "type": "STRAIGHT",
+        "cells": [
+          [
+            {
+              "active": false
+            },
+            {
+              "active": false
+            },
+            {
+              "active": false
+            }
+          ],
+          [
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            },
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            },
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": false
+            },
+            {
+              "active": false
+            }
+          ]
+        ]
+      },
+      {
+        "id": "T03",
+        "gridRow": 0,
+        "gridCol": 3,
         "type": "CORNER",
         "cells": [
           [
@@ -164,50 +208,6 @@ export const PRACTICE_TEST_3_PUZZLES: PuzzleDefinition[] = [
         "id": "T10",
         "gridRow": 1,
         "gridCol": 0,
-        "type": "CROSS",
-        "cells": [
-          [
-            {
-              "active": false
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": false
-            }
-          ],
-          [
-            {
-              "active": true
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": true
-            }
-          ],
-          [
-            {
-              "active": false
-            },
-            {
-              "active": true,
-              "arrowDirection": "UP"
-            },
-            {
-              "active": false
-            }
-          ]
-        ]
-      },
-      {
-        "id": "T11",
-        "gridRow": 1,
-        "gridCol": 1,
         "type": "CORNER",
         "cells": [
           [
@@ -249,9 +249,97 @@ export const PRACTICE_TEST_3_PUZZLES: PuzzleDefinition[] = [
         ]
       },
       {
+        "id": "T11",
+        "gridRow": 1,
+        "gridCol": 1,
+        "type": "T_JUNCTION",
+        "cells": [
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection":"UP"
+            },
+            {
+              "active": false
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": true,
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": false
+            }
+          ]
+        ]
+      },
+      {
         "id": "T12",
         "gridRow": 1,
         "gridCol": 2,
+        "type": "STRAIGHT",
+        "cells": [
+          [
+            {
+              "active": false
+            },
+            {
+              "active": false
+            },
+            {
+              "active": false
+            }
+          ],
+          [
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            },
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            },
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": false
+            },
+            {
+              "active": false
+            }
+          ]
+        ]
+      },
+      {
+        "id": "T13",
+        "gridRow": 1,
+        "gridCol": 3,
         "type": "CORNER",
         "cells": [
           [
@@ -296,7 +384,7 @@ export const PRACTICE_TEST_3_PUZZLES: PuzzleDefinition[] = [
         "id": "T20",
         "gridRow": 2,
         "gridCol": 0,
-        "type": "T_JUNCTION",
+        "type": "CORNER",
         "cells": [
           [
             {
@@ -312,7 +400,7 @@ export const PRACTICE_TEST_3_PUZZLES: PuzzleDefinition[] = [
           ],
           [
             {
-              "active": true
+              "active": false
             },
             {
               "active": true,
@@ -340,15 +428,14 @@ export const PRACTICE_TEST_3_PUZZLES: PuzzleDefinition[] = [
         "id": "T21",
         "gridRow": 2,
         "gridCol": 1,
-        "type": "CROSS",
+        "type": "T_JUNCTION",
         "cells": [
           [
             {
               "active": false
             },
             {
-              "active": true,
-              "arrowDirection": "UP"
+              "active": true
             },
             {
               "active": false
@@ -356,14 +443,16 @@ export const PRACTICE_TEST_3_PUZZLES: PuzzleDefinition[] = [
           ],
           [
             {
-              "active": true
+              "active": true,
+              "arrowDirection": "RIGHT"
             },
             {
               "active": true,
-              "arrowDirection": "UP"
+              "arrowDirection": "LEFT"
             },
             {
-              "active": true
+              "active": true,
+              "arrowDirection": "LEFT"
             }
           ],
           [
@@ -371,8 +460,7 @@ export const PRACTICE_TEST_3_PUZZLES: PuzzleDefinition[] = [
               "active": false
             },
             {
-              "active": true,
-              "arrowDirection": "UP"
+              "active": false
             },
             {
               "active": false
@@ -384,7 +472,7 @@ export const PRACTICE_TEST_3_PUZZLES: PuzzleDefinition[] = [
         "id": "T22",
         "gridRow": 2,
         "gridCol": 2,
-        "type": "CROSS",
+        "type": "T_JUNCTION",
         "cells": [
           [
             {
@@ -400,16 +488,36 @@ export const PRACTICE_TEST_3_PUZZLES: PuzzleDefinition[] = [
           ],
           [
             {
-              "active": true
+              "active": true,
             },
             {
               "active": true,
-              "arrowDirection": "UP"
+              "arrowDirection": "UP_LEFT"
             },
             {
-              "active": true
+              "active": true,
+              "arrowDirection": "LEFT"
             }
           ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": false
+            },
+            {
+              "active": false
+            }
+          ]
+        ]
+      },
+      {
+        "id": "T23",
+        "gridRow": 2,
+        "gridCol": 3,
+        "type": "CORNER",
+        "cells": [
           [
             {
               "active": false
@@ -421,20 +529,220 @@ export const PRACTICE_TEST_3_PUZZLES: PuzzleDefinition[] = [
             {
               "active": false
             }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP_LEFT"
+            },
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": false
+            },
+            {
+              "active": false
+            }
+          ]
+        ]
+      },
+      {
+        "id": "T30",
+        "gridRow": 3,
+        "gridCol": 0,
+        "type": "CORNER",
+        "cells": [
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": false
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP_LEFT"
+            },
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": false
+            },
+            {
+              "active": false
+            }
+          ]
+        ]
+      },
+      {
+        "id": "T31",
+        "gridRow": 3,
+        "gridCol": 1,
+        "type": "STRAIGHT",
+        "cells": [
+          [
+            {
+              "active": false
+            },
+            {
+              "active": false
+            },
+            {
+              "active": false
+            }
+          ],
+          [
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            },
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            },
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": false
+            },
+            {
+              "active": false
+            }
+          ]
+        ]
+      },
+      {
+        "id": "T32",
+        "gridRow": 3,
+        "gridCol": 2,
+        "type": "STRAIGHT",
+        "cells": [
+          [
+            {
+              "active": false
+            },
+            {
+              "active": false
+            },
+            {
+              "active": false
+            }
+          ],
+          [
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            },
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            },
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": false
+            },
+            {
+              "active": false
+            }
+          ]
+        ]
+      },
+      {
+        "id": "T33",
+        "gridRow": 3,
+        "gridCol": 3,
+        "type": "CORNER",
+        "cells": [
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP"
+            },
+            {
+              "active": false
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": true,
+              "arrowDirection": "UP_LEFT"
+            },
+            {
+              "active": true,
+              "arrowDirection": "LEFT"
+            }
+          ],
+          [
+            {
+              "active": false
+            },
+            {
+              "active": false
+            },
+            {
+              "active": false
+            }
           ]
         ]
       }
     ],
     "initialTileStates": {
       "T00": {
-        "rotation": 1,
+        "rotation": 0,
         "flipState": 0,
         "mode": 0,
         "flipped": false,
         "directionReversed": false
       },
       "T01": {
-        "rotation": 2,
+        "rotation": 3,
         "flipState": 0,
         "mode": 0,
         "flipped": false,
@@ -442,26 +750,40 @@ export const PRACTICE_TEST_3_PUZZLES: PuzzleDefinition[] = [
       },
       "T02": {
         "rotation": 1,
+        "flipState": 0,
+        "mode": 0,
+        "flipped": false,
+        "directionReversed": false
+      },
+      "T03": {
+        "rotation": 1,
         "flipState": 1,
         "mode": 1,
         "flipped": true,
         "directionReversed": true
       },
       "T10": {
-        "rotation": 3,
-        "flipState": 5,
-        "mode": 5,
+        "rotation": 0,
+        "flipState": 1,
+        "mode": 1,
         "flipped": true,
         "directionReversed": true
       },
       "T11": {
-        "rotation": 0,
+        "rotation": 1,
         "flipState": 0,
         "mode": 0,
         "flipped": false,
         "directionReversed": false
       },
       "T12": {
+        "rotation": 3,
+        "flipState": 0,
+        "mode": 0,
+        "flipped": false,
+        "directionReversed": false
+      },
+      "T13": {
         "rotation": 1,
         "flipState": 0,
         "mode": 0,
@@ -469,45 +791,87 @@ export const PRACTICE_TEST_3_PUZZLES: PuzzleDefinition[] = [
         "directionReversed": false
       },
       "T20": {
-        "rotation": 2,
-        "flipState": 4,
-        "mode": 4,
+        "rotation": 0,
+        "flipState": 0,
+        "mode": 0,
         "flipped": false,
         "directionReversed": false
       },
       "T21": {
         "rotation": 0,
-        "flipState": 4,
-        "mode": 4,
+        "flipState": 0,
+        "mode": 0,
         "flipped": false,
         "directionReversed": false
       },
       "T22": {
-        "rotation": 2,
-        "flipState": 9,
-        "mode": 9,
+        "rotation": 1,
+        "flipState": 0,
+        "mode": 0,
+        "flipped": false,
+        "directionReversed": false
+      },
+      "T23": {
+        "rotation": 1,
+        "flipState": 1,
+        "mode": 1,
         "flipped": true,
         "directionReversed": true
+      },
+      "T30": {
+        "rotation": 0,
+        "flipState": 1,
+        "mode": 1,
+        "flipped": true,
+        "directionReversed": true
+      },
+      "T31": {
+        "rotation": 1,
+        "flipState": 0,
+        "mode": 0,
+        "flipped": false,
+        "directionReversed": false
+      },
+      "T32": {
+        "rotation": 3,
+        "flipState": 0,
+        "mode": 0,
+        "flipped": false,
+        "directionReversed": false
+      },
+      "T33": {
+        "rotation": 1,
+        "flipState": 0,
+        "mode": 0,
+        "flipped": false,
+        "directionReversed": false
       }
     },
     "solution": {
-      "minMoves": 14,
+      "minMoves": 18,
       "tileStates": {
         "T00": {
-          "rotation": 2,
+          "rotation": 1,
           "flipState": 0,
           "mode": 0,
           "flipped": false,
           "directionReversed": false
         },
         "T01": {
-          "rotation": 2,
+          "rotation": 0,
           "flipState": 0,
           "mode": 0,
           "flipped": false,
           "directionReversed": false
         },
         "T02": {
+          "rotation": 0,
+          "flipState": 0,
+          "mode": 0,
+          "flipped": false,
+          "directionReversed": false
+        },
+        "T03": {
           "rotation": 2,
           "flipState": 0,
           "mode": 0,
@@ -515,46 +879,88 @@ export const PRACTICE_TEST_3_PUZZLES: PuzzleDefinition[] = [
           "directionReversed": false
         },
         "T10": {
-          "rotation": 3,
-          "flipState": 7,
-          "mode": 7,
-          "flipped": true,
-          "directionReversed": true
+          "rotation": 1,
+          "flipState": 0,
+          "mode": 0,
+          "flipped": false,
+          "directionReversed": false
         },
         "T11": {
-          "rotation": 2,
-          "flipState": 1,
-          "mode": 1,
-          "flipped": true,
-          "directionReversed": true
+          "rotation": 0,
+          "flipState": 0,
+          "mode": 0,
+          "flipped": false,
+          "directionReversed": false
         },
         "T12": {
-          "rotation": 1,
-          "flipState": 1,
-          "mode": 1,
-          "flipped": true,
-          "directionReversed": true
+          "rotation": 0,
+          "flipState": 0,
+          "mode": 0,
+          "flipped": false,
+          "directionReversed": false
+        },
+        "T13": {
+          "rotation": 2,
+          "flipState": 0,
+          "mode": 0,
+          "flipped": false,
+          "directionReversed": false
         },
         "T20": {
-          "rotation": 2,
-          "flipState": 5,
-          "mode": 5,
-          "flipped": true,
-          "directionReversed": true
+          "rotation": 1,
+          "flipState": 0,
+          "mode": 0,
+          "flipped": false,
+          "directionReversed": false
         },
         "T21": {
-          "rotation": 1,
-          "flipState": 4,
-          "mode": 4,
+          "rotation": 0,
+          "flipState": 0,
+          "mode": 0,
           "flipped": false,
           "directionReversed": false
         },
         "T22": {
+          "rotation": 0,
+          "flipState": 0,
+          "mode": 0,
+          "flipped": false,
+          "directionReversed": false
+        },
+        "T23": {
+          "rotation": 2,
+          "flipState": 0,
+          "mode": 0,
+          "flipped": false,
+          "directionReversed": false
+        },
+        "T30": {
           "rotation": 1,
-          "flipState": 9,
-          "mode": 9,
-          "flipped": true,
-          "directionReversed": true
+          "flipState": 0,
+          "mode": 0,
+          "flipped": false,
+          "directionReversed": false
+        },
+        "T31": {
+          "rotation": 0,
+          "flipState": 0,
+          "mode": 0,
+          "flipped": false,
+          "directionReversed": false
+        },
+        "T32": {
+          "rotation": 0,
+          "flipState": 0,
+          "mode": 0,
+          "flipped": false,
+          "directionReversed": false
+        },
+        "T33": {
+          "rotation": 1,
+          "flipState": 0,
+          "mode": 0,
+          "flipped": false,
+          "directionReversed": false
         }
       }
     }
@@ -2219,7 +2625,7 @@ export const PRACTICE_TEST_3_PUZZLES: PuzzleDefinition[] = [
       "entrySide": "LEFT"
     },
     "destinationPos": {
-      "row": 7,
+      "row": 1,
       "col": 8,
       "exitSide": "RIGHT"
     },
@@ -2448,14 +2854,15 @@ export const PRACTICE_TEST_3_PUZZLES: PuzzleDefinition[] = [
         "id": "T12",
         "gridRow": 1,
         "gridCol": 2,
-        "type": "STRAIGHT",
+        "type": "CORNER",
         "cells": [
           [
             {
               "active": false
             },
             {
-              "active": false
+              "active": true,
+              "arrowDirection": "UP"
             },
             {
               "active": false

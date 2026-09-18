@@ -13,6 +13,10 @@ interface PathFinderBoardProps {
   selectedTileId: string | null;
   onSelectTile: (tileId: string) => void;
 
+  // Rocket is scaled to the underlying cell size so a 4x4 tile board
+  // (12x12 underlying cells) does not use an oversized rocket.
+  rocketSize?: number;
+
   animatingRocket?: {
     x: number;
     y: number;
@@ -26,6 +30,7 @@ export function PathFinderBoard({
   selectedTileId,
   onSelectTile,
   animatingRocket,
+  rocketSize,
 }: PathFinderBoardProps) {
   const startRowRatio =
     (puzzle.startPos.row + 0.5) /
@@ -34,6 +39,20 @@ export function PathFinderBoard({
   const destRowRatio =
     (puzzle.destinationPos.row + 0.5) /
     puzzle.gridRows;
+
+  const cellSize =
+    378 /
+    puzzle.gridCols;
+
+  const actualRocketSize =
+    rocketSize ??
+    Math.round(cellSize * 0.76);
+
+  const boardColumns =
+    `repeat(${puzzle.tileCols}, minmax(0, 1fr))`;
+
+  const boardRows =
+    `repeat(${puzzle.tileRows}, minmax(0, 1fr))`;
 
   return (
     <div className="relative flex items-center justify-center py-2 px-8 sm:px-10 w-full max-w-[458px]">
@@ -77,13 +96,7 @@ export function PathFinderBoard({
             stroke="currentColor"
             strokeWidth="2.5"
           />
-
-          <circle
-            cx="20"
-            cy="20"
-            r="7"
-          />
-
+          <circle cx="20" cy="20" r="7" />
           <circle
             cx="16"
             cy="16"
@@ -104,8 +117,6 @@ export function PathFinderBoard({
           max-w-[378px]
           aspect-square
           grid
-          grid-cols-3
-          grid-rows-3
           border-[3px]
           border-[#9ca3af]
           bg-white
@@ -113,6 +124,10 @@ export function PathFinderBoard({
           shadow-sm
           select-none
         "
+        style={{
+          gridTemplateColumns: boardColumns,
+          gridTemplateRows: boardRows,
+        }}
       >
 
         {/* =======================================================
@@ -135,7 +150,9 @@ export function PathFinderBoard({
               top: `${startRowRatio * 100}%`,
             }}
           >
-            <StartingRocket />
+            <StartingRocket
+              size={actualRocketSize}
+            />
           </div>
         )}
 
@@ -143,41 +160,31 @@ export function PathFinderBoard({
             PUZZLE TILES
             ======================================================= */}
 
-        {puzzle.tiles.map(
-          (tile) => {
-            const isSelected =
-              selectedTileId ===
-              tile.id;
+        {puzzle.tiles.map((tile) => {
+          const isSelected =
+            selectedTileId === tile.id;
 
-            const state =
-              tileStates[
-                tile.id
-              ] || {
-                rotation: 0,
-                directionReversed:
-                  false,
-              };
+          const state =
+            tileStates[tile.id] || {
+              rotation: 0,
+              directionReversed: false,
+            };
 
-            return (
-              <PathFinderTile
-                key={tile.id}
-                tile={tile}
-                state={state}
-                isSelected={
-                  isSelected
-                }
-                onSelect={
-                  onSelectTile
-                }
-              />
-            );
-          }
-        )}
+          return (
+            <PathFinderTile
+              key={tile.id}
+              tile={tile}
+              state={state}
+              isSelected={isSelected}
+              onSelect={onSelectTile}
+            />
+          );
+        })}
 
         {/* =======================================================
             ANIMATED STARTING ROCKET
             ======================================================= */}
-        
+
         {animatingRocket && (
           <div
             className="
@@ -187,10 +194,10 @@ export function PathFinderBoard({
               flex
               items-center
               justify-center
-              w-8 h-8
-              sm:w-10 sm:h-10
             "
             style={{
+              width: `${actualRocketSize}px`,
+              height: `${actualRocketSize}px`,
               left: `${(animatingRocket.x / 378) * 100}%`,
               top: `${(animatingRocket.y / 378) * 100}%`,
 
@@ -203,7 +210,9 @@ export function PathFinderBoard({
                 "center center",
             }}
           >
-            <StartingRocket />
+            <StartingRocket
+              size={actualRocketSize}
+            />
           </div>
         )}
       </div>
@@ -215,12 +224,17 @@ export function PathFinderBoard({
 // STARTING ROCKET
 // ============================================================================
 
-function StartingRocket() {
+function StartingRocket({
+  size = 32,
+}: {
+  size?: number;
+}) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 1100 1014"
-      className="w-8 h-8 sm:w-10 sm:h-10"
+      width={size}
+      height={size}
       aria-label="Start position"
     >
 
